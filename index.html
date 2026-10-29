@@ -157,7 +157,7 @@ function snap(d){AMB.seen=1;const sm=(n,p)=>{if(p){const dx=p.x+(p.ex||0)-n.x,dy
  for(const i in d.p){const q=d.p[i];np[i]=sm({x:q[0]/10,y:q[1]/10,vx:q[2]/10,vy:q[3]/10,r:q[4]/10,cd:q[5],ef:q[6],fz:q[7]?60:0,in:{x:q[8]/100,y:q[9]/100,k:q[10]},kc:q[11],t:q[12]},S.p[i])}
  for(const i in d.v){const q=d.v[i];ns[i]=sm({x:q[0]/10,y:q[1]/10,vx:q[2]/10,vy:q[3]/10,h:q[4]/10,vz:q[5]/10},S.sp[i])}
  S.b=B;S.p=np;S.sp=ns;S.s=d.s;S.m=d.m;S.tm=d.tm;S.run=d.run;S.pa=d.pa;S.ot=d.ot;S.ko=d.ko||0;S.lim=d.lim}
-function cdata(d){if(d.t==='s'){if(d.pv!==2){if(!cdata.w){cdata.w=1;toast('⚠ El anfitrión tiene otra versión: recargá la página (Ctrl+F5)')}return}snap(d)}else if(d.t==='wel'){joined=1;enter(JC);syncEq()}else if(d.t==='no')err(d.m)
+function cdata(d){if(d.t==='s'){if(d.pv!==3){if(!cdata.w){cdata.w=1;toast('⚠ El anfitrión tiene otra versión: recargá la página (Ctrl+F5)')}return}snap(d)}else if(d.t==='wel'){joined=1;enter(JC);syncEq()}else if(d.t==='no')err(d.m)
  else if(d.t==='ros'){ROSc={};for(const i in d.r)ROSc[i]={id:i,n:d.r[i][0],team:d.r[i][1],admin:d.r[i][2],pw:d.r[i][3],sk:d.r[i][4],im:d.r[i][5],gm:d.r[i][6]};if(d.cf)applyCfg(cfgSan(d.cf,DCFG));warm();menu()}else if(d.t==='goal')playGoal(d);else if(d.t==='msg')show(d);else if(d.t==='pn')PING=Date.now()-d.n}
 const all=o=>{for(const i in PL)if(PL[i].conn)PL[i].conn.send(o)};
 function say(o,to){if(!isHost)return show(o);if(!to){all(o);show(o)}else if(to==='host')show(o);else PL[to]&&PL[to].conn.send(o)}
@@ -260,7 +260,7 @@ function usePw(p,id){const k=PL[id]?PL[id].pw:-1;if(!(k>=0))return;const i=p.in|
 function givePw(){S.pwt=0;let pool=[];for(const id in PL){if(!pool.length)pool=PWR.map((x,i)=>i).sort(()=>Math.random()-.5);let j=pool.length-1;if(pool.length>1&&pool[j]===PL[id].pw)j--;PL[id].pw=pool.splice(j,1)[0];pwMsg(id)}}
 function pwMsg(id){const k=PL[id].pw;if(k>=0)say({t:'msg',m:'Tu poder: '+PWR[k][0]+' '+PWR[k][1]+' · usalo con la tecla de Poder (E por defecto), recarga 8 s',c:'#ffd84d'},id)}
 function phys(b,L){const M=p=>p.ef===5?6:p.ef===6?10:p.ef===8?1:2;for(const p of L){const i=p.fz?{}:(p.in||{}),l=Math.hypot(i.x||0,i.y||0),a=(i.k?.07:.1)*(p.ef===1?2.2:p.ef===7?.4:p.ef===8?1.35:1);if(l){p.vx+=i.x/l*a;p.vy+=i.y/l*a}p.vx*=.96;p.vy*=.96;p.x+=p.vx;p.y+=p.vy;if(p.kc>0)p.kc--;if(S.ko&&p.t&&p.t!==S.ko){const h=p.t===1?-1:1;if(h*p.x<p.r){p.x=h*p.r;if(h*p.vx<0)p.vx=0}}
-  if(p.ef===4){const dx=p.x-b.x,dy=p.y-b.y,d=Math.hypot(dx,dy);if(d>1&&d<170){b.vx+=dx/d*.3;b.vy+=dy/d*.3}}}
+  if(p.ef===4&&!(S.ko&&p.t&&p.t!==S.ko)){const dx=p.x-b.x,dy=p.y-b.y,d=Math.hypot(dx,dy);if(d>1&&d<170){b.vx+=dx/d*.3;b.vy+=dy/d*.3}}}
  b.x+=b.vx;b.y+=b.vy;b.vx*=.99;b.vy*=.99;
  for(let i=0;i<L.length;i++){for(let j=i+1;j<L.length;j++)col(L[i],L[j],L[i].r,L[j].r,M(L[i]),M(L[j]),.25);const p=L[i],rs=S.ko&&p.t&&p.t!==S.ko;if(!rs)col(p,b,p.r,BR,M(p),1,.25);
   if(!rs&&p.in&&p.in.k&&!p.fz&&!p.kc){const dx=b.x-p.x,dy=b.y-p.y,d=Math.hypot(dx,dy)||1;if(d<p.r+BR+10){const f=p.ef===3?14:5;b.vx+=dx/d*f;b.vy+=dy/d*f;if(p.ef===3){p.ef=0;p.et=0}p.kc=8}}
@@ -283,7 +283,7 @@ const ri=v=>Math.round(v*10);
 function send(){let pc=0;for(const i in PL)if(PL[i].conn){pc=1;break}if(!pc)return;
  const p={};for(const i in S.p){const q=S.p[i],n=q.in||{};p[i]=[ri(q.x),ri(q.y),ri(q.vx),ri(q.vy),ri(q.r||PR),Math.ceil((q.cd||0)/60),q.ef||0,q.fz?1:0,Math.round((n.x||0)*100),Math.round((n.y||0)*100),n.k?1:0,q.kc||0,q.t||0]}
  const v={};for(const i in S.sp){const q=S.sp[i];v[i]=[ri(q.x),ri(q.y),ri(q.vx),ri(q.vy),ri(q.h==null?0:q.h),ri(q.vz||0)]}
- const o={t:'s',pv:2,b:[ri(S.b.x),ri(S.b.y),ri(S.b.vx),ri(S.b.vy)],p,v,s:S.s,m:S.m,tm:Math.ceil(S.tm),run:S.run,pa:S.pa,ot:S.ot,ko:S.ko,lim:S.lim};
+ const o={t:'s',pv:3,b:[ri(S.b.x),ri(S.b.y),ri(S.b.vx),ri(S.b.vy)],p,v,s:S.s,m:S.m,tm:Math.ceil(S.tm),run:S.run,pa:S.pa,ot:S.ot,ko:S.ko,lim:S.lim};
  for(const i in PL){const c=PL[i].conn;if(!c)continue;const dc=c.dataChannel;if(dc&&dc.bufferedAmount>48000)continue;c.send(o)}}
 // ---------- entrada ----------
 const keys={},AC=[['up','Arriba'],['down','Abajo'],['left','Izquierda'],['right','Derecha'],['kick','Patear'],['power','Poder'],['jump','Saltar (solo espectadores)']],DK={up:['w','arrowup'],down:['s','arrowdown'],left:['a','arrowleft'],right:['d','arrowright'],kick:[' ','x'],power:['e',''],jump:[' ','']};
