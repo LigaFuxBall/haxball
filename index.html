@@ -405,7 +405,7 @@ function musAuto(){if(BP&&BP.eq.m>=0&&AU.paused)playMus(BP.eq.m)}
 addEventListener('pointerdown',musAuto);addEventListener('keydown',musAuto);
 // ---------- pase desde la hoja, playlist y música de gol ----------
 const FC={},ni=x=>Number.isInteger(x)?x:-1,vt=(i,t)=>PASS.tiers[i]&&PASS.tiers[i].t===t?i:-1,sv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-let PASSOK=0,PLY=[],pI=-1,gBusy=0,gT=0,gF=0;const GQ=[],PA=Object.assign(new Audio(),{crossOrigin:'anonymous'}),GA=new Audio(),hasT=i=>!PASSOK||PASS.tiers[i];
+let plF=1,plT=1,gEnd=0,plFt=0,PASSOK=0,PLY=[],pI=-1,gBusy=0,gT=0,gF=0;const GQ=[],PA=Object.assign(new Audio(),{crossOrigin:'anonymous'}),GA=Object.assign(new Audio(),{crossOrigin:'anonymous'}),hasT=i=>!PASSOK||PASS.tiers[i];
 let PV=+(localStorage.getItem('hx3pv')||.25),PON=localStorage.getItem('hx3po')!=='0',GV=+(localStorage.getItem('hx3gv')||.7);
 try{const c=JSON.parse(localStorage.getItem('hx3pass'));if(c&&c.tiers&&c.tiers.length){PASS={xp:c.xp,tiers:c.tiers};PLY=c.pl||[];PASSOK=1}}catch(e){}
 function fileUrl(r){if(!r)return Promise.resolve('');if(r.u)return Promise.resolve(r.u);if(!r.f)return Promise.resolve('');
@@ -419,7 +419,7 @@ function syncEq(){if(isHost||(conn&&conn.open))A('eq',eqIm(),eqGm())}
 async function passPull(){const r=await srv('pass');if(r&&r.tiers&&r.tiers.length){PASS={xp:+r.xp||100,tiers:r.tiers};PLY=r.pl||[];PASSOK=1;sv('hx3pass',JSON.stringify({xp:PASS.xp,tiers:PASS.tiers,pl:PLY}))}
  try{loadBP()}catch(e){}if(isHost)bro();else syncEq();plStart();warm();if($('menu').classList.contains('on'))menu()}
 // playlist de fondo
-function plVol(){PA.volume=Math.max(0,Math.min(1,PV))}
+function plVol(){PA.volume=Math.max(0,Math.min(1,PV*plF))}
 function actx(){KAC=KAC||new(window.AudioContext||window.webkitAudioContext)();if(KAC.state==='suspended')KAC.resume();return KAC}
 // playlist como si saliera de los parlantes del estadio (audio 3D + eco + se apaga con la distancia)
 let SPG=0;const SV=new THREE.Vector3(),SU=new THREE.Vector3(),setPos=(p,x,y,z)=>{if(p.positionX){p.positionX.value=x;p.positionY.value=y;p.positionZ.value=z}else p.setPosition(x,y,z)};
@@ -429,11 +429,14 @@ function sp3d(){if(SPG!==0)return;SPG=null;try{const c=actx(),mob=/Mobi|Android/
  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3)}
  cv.buffer=ir;lp.type='lowpass';lp.frequency.value=16000;dry.gain.value=1.5;wet.gain.value=.45;
  lp.connect(dry);lp.connect(cv);cv.connect(wet);dry.connect(c.destination);wet.connect(c.destination);a.connect(lp);b.connect(lp);
- const src=c.createMediaElementSource(PA);src.connect(a);src.connect(b);SPG={c,lp}}catch(e){SPG=null}}
+ SPG={c,lp,a,b};spHook(PA)}catch(e){SPG=null}}
+function spHook(el){if(!SPG||el._h)return;el._h=1;const s=SPG.c.createMediaElementSource(el);s.connect(SPG.a);s.connect(SPG.b)}
 function spUpd(){if(!SPG)return;const L=SPG.c.listener,P=cam.position;cam.getWorldDirection(SV);SU.set(0,1,0).applyQuaternion(cam.quaternion);
  if(L.positionX){L.positionX.value=P.x;L.positionY.value=P.y;L.positionZ.value=P.z;L.forwardX.value=SV.x;L.forwardY.value=SV.y;L.forwardZ.value=SV.z;L.upX.value=SU.x;L.upY.value=SU.y;L.upZ.value=SU.z}else{L.setPosition(P.x,P.y,P.z);L.setOrientation(SV.x,SV.y,SV.z,SU.x,SU.y,SU.z)}
  SPG.lp.frequency.value=Math.max(1800,16000-Math.max(0,Math.hypot(P.x,P.y,P.z)-350)*20)}
-function plSync(){if(PON&&AU.paused&&!gBusy&&PA.src){sp3d();actx();if(PA.paused)PA.play().catch(()=>{})}else PA.pause()}
+function plFade(to,ms,done){clearInterval(plFt);const from=plF,t0=performance.now();plFt=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);plF=from+(to-from)*k;plVol();if(k>=1){clearInterval(plFt);done&&done()}},40)}
+function plIn(){if(PON&&AU.paused&&PA.src){sp3d();actx();if(PA.paused)PA.play().catch(()=>{});if(plT!==1){plT=1;plFade(1,1200)}}}
+function plSync(){const on=PON&&AU.paused&&PA.src;if(on&&!gBusy)plIn();else if(on){if(!gEnd&&plT!==0){plT=0;plFade(0,600,()=>{if(gBusy&&!gEnd)PA.pause()})}}else{clearInterval(plFt);plT=1;plF=1;plVol();PA.pause()}}
 async function plNext(k){if(!PLY.length)return;pI=(pI<0?Math.random()*PLY.length|0:pI+1)%PLY.length;const u=await fileUrl(PLY[pI]);if(!u)return(k|0)<PLY.length?plNext((k|0)+1):0;if(PA._u!==u){PA._u=u;PA.src=u}plVol();plSync()}
 function plStart(){if(PON&&PLY.length&&!PA.src)plNext()}
 function setPon(v){PON=v;sv('hx3po',v?1:0);if(v)plStart();plSync()}
@@ -443,18 +446,19 @@ const plKick=()=>{plStart();plSync()};addEventListener('pointerdown',plKick);add
 function goalFx(t){const id=S.lt,p=PL[id];S.lt=null;if(!p)return;if(p.team!==t){sys('😅 Autogol de '+p.n);return}
  sys('⚽ Gol de '+p.n);const g=vt(p.gm,'gol');if(g>=0){const o={t:'goal',g,n:p.n};all(o);playGoal(o)}}
 function playGoal(d){const r=PASS.tiers[d.g];if(!r||r.t!=='gol'||GV<=0)return;toast('🎵 '+(d.n||'')+' · '+r.n);GQ.push(r);if(!gBusy)gNext()}
-async function gNext(){clearTimeout(gT);clearInterval(gF);const r=GQ.shift();if(!r){gBusy=0;plVol();plSync();return}gBusy=1;plVol();plSync();const u=await fileUrl(r);if(!u)return gNext();
+async function gNext(){clearTimeout(gT);clearInterval(gF);const r=GQ.shift();if(!r){gBusy=0;plVol();plSync();return}gBusy=1;gEnd=0;plVol();const u=await fileUrl(r);if(!u)return gNext();
+ sp3d();try{if(SPG){actx();spHook(GA)}}catch(e){}
  const st=Math.max(0,+r.st||0),du=Math.max(2,Math.min(30,+r.du||8));GA._p=r.u||'archivo de Drive';GA.volume=Math.min(1,GV);
- const go=()=>{try{GA.currentTime=st}catch(e){}GA.play().then(()=>{gT=setTimeout(gFade,Math.max(300,du*1000-1000))}).catch(e=>{if(e&&e.name==='NotAllowedError')toast('🔇 El navegador bloqueó el sonido: hacé click en el juego y probá de nuevo');gNext()})};
+ const go=()=>{plSync();try{GA.currentTime=st}catch(e){}GA.play().then(()=>{gT=setTimeout(gFade,Math.max(300,du*1000-1000))}).catch(e=>{if(e&&e.name==='NotAllowedError')toast('🔇 El navegador bloqueó el sonido: hacé click en el juego y probá de nuevo');gNext()})};
  GA.onloadedmetadata=()=>{GA.onloadedmetadata=null;go()};GA.src=u}
 GA.onerror=()=>{toast('⚠ No se pudo cargar la música de gol: '+(GA._p||'')+' (revisá que la ruta exista en GitHub)');gNext()};
 PA.onerror=()=>toast('⚠ No se pudo cargar la playlist: '+(PLY[pI]?PLY[pI].u:''));
-function gFade(){let v=GA.volume;gF=setInterval(()=>{v-=.1*Math.max(.1,GV);if(v<=.02){clearInterval(gF);GA.pause();gNext()}else GA.volume=Math.max(0,v)},100)}
+function gFade(){if(!GQ.length){gEnd=1;plIn()}let v=GA.volume;gF=setInterval(()=>{v-=.1*Math.max(.1,GV);if(v<=.02){clearInterval(gF);GA.pause();gNext()}else GA.volume=Math.max(0,v)},100)}
 GA.onended=()=>gNext();
 function pSound(pg){const sl=(lab,get,set)=>{const r=el('div',0,'bar'),i=el('input'),t=el('span',lab+': '+Math.round(get()*100)+'%');i.type='range';i.min=0;i.max=100;i.value=get()*100;i.style.width='170px';i.oninput=()=>{set(i.value/100);t.textContent=lab+': '+i.value+'%'};r.append(t,i);return r};
  const pb=el('div',0,'bar');pb.append(el('b','🎶 Playlist'),el('button',PON?'🔊 Sonando (apagar)':'🔇 Apagada (encender)',0,()=>{setPon(!PON);menu()}),el('button','⏭ Siguiente',0,()=>{plNext()}),el('span',PLY.length?PLY.length+' temas · ahora: '+(PLY[pI]?PLY[pI].n:'—'):'Sin temas: agregalos en la hoja (tipo playlist)'));
  pg.append(pb,sl('Volumen de la playlist',()=>PV,v=>{PV=v;sv('hx3pv',v);plVol()}),...(BP?[sl('Volumen de tu música personal (la del Locker)',()=>BP.vol,v=>{BP.vol=v;AU.volume=v;bpSave()})]:[el('p','Entrá con tu cuenta para regular tu música personal.','hint')]),sl('Volumen del golpe a la pelota (0 = sin sonido)',()=>KV,v=>{KV=v;sv('hx3kv',v)}),el('p','Música de gol','hint'),sl('Volumen de músicas de gol (0 = silencio)',()=>GV,v=>{GV=v;sv('hx3gv',v);GA.volume=Math.min(1,v)}),
- el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist suena como si saliera de los parlantes del estadio (se oye de costado y más fuerte o más lejana según dónde estés), se pausa mientras suena una música de gol y vuelve donde quedó; también se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
+ el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist suena como si saliera de los parlantes del estadio (se oye de costado y más fuerte o más lejana según dónde estés), se funde con la música de gol (baja cuando entra el gol y vuelve suave cuando termina), y la música de gol también sale de los parlantes; también se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
 
 function pPass(pg){if(!BP)pg.append(el('p','Entrá con una cuenta (usuario y contraseña en la pantalla de inicio) para ganar XP y guardar tu progreso en el pase.','hint'));
  const lv=bpLv(),T=PASS.tiers,nx=BP&&lv<T.length?BP.xp%PASS.xp:0,h=el('div',0,'bar'),pb=el('div'),fl2=el('div');
