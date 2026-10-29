@@ -340,7 +340,7 @@ const CR=PR*1.012,CT=1.02,capG=new THREE.SphereGeometry(CR,28,10,0,Math.PI*2,0,C
 function mkCapC(cv){const t=new THREE.CanvasTexture(cv);cv._t=t;return new THREE.Mesh(capG,new THREE.MeshLambertMaterial({map:t,transparent:true}))}
 const mkCap=(t,s)=>mkCapC(skinCanvas(t,s));
 function imgCap(t,i){const cv=document.createElement('canvas');cv.width=cv.height=128;const g=cv.getContext('2d');g.beginPath();g.arc(64,64,64,0,7);g.clip();g.fillStyle=TC[t]||'#888';g.fillRect(0,0,128,128);const m=mkCapC(cv);
- fileUrl(PASS.tiers[i]).then(u=>{if(!u)return;const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{g.drawImage(im,0,0,128,128);cv._t.needsUpdate=true};im.src=u});return m}
+ fileUrl(PASS.tiers[i]).then(u=>{if(!u)return;const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{g.drawImage(im,0,0,128,128);cv._t.needsUpdate=true};im.onerror=()=>toast('⚠ No se pudo cargar la imagen: '+(PASS.tiers[i].u||''));im.src=u});return m}
 // extrapolación estilo HaxBall: el cliente predice N ms hacia adelante
 let EXT=+(localStorage.getItem('hx3e')||0)||0,PING=0;
 function setExt(v){EXT=Math.max(0,Math.min(200,Math.round(v)||0));try{localStorage.setItem('hx3e',EXT)}catch(e){}}
@@ -404,6 +404,9 @@ let PV=+(localStorage.getItem('hx3pv')||.25),PON=localStorage.getItem('hx3po')!=
 try{const c=JSON.parse(localStorage.getItem('hx3pass'));if(c&&c.tiers&&c.tiers.length){PASS={xp:c.xp,tiers:c.tiers};PLY=c.pl||[];PASSOK=1}}catch(e){}
 function fileUrl(r){if(!r)return Promise.resolve('');if(r.u)return Promise.resolve(r.u);if(!r.f)return Promise.resolve('');
  return FC[r.f]||(FC[r.f]=srv('file','','',{id:r.f}).then(d=>d&&d.b?'data:'+d.m+';base64,'+d.b:(delete FC[r.f],'')))}
+function icoEl(r,d){const src=r.ic||(r.t==='img'?r.u:'');if(src){const im=new Image();im.src=src;im.style.cssText='width:46px;height:46px;border-radius:10px;object-fit:cover';im.onerror=()=>im.replaceWith(el('b',d));return im}return el('b',d)}
+let KAC=null,KV=+(localStorage.getItem('hx3kv')||.35);
+function kickSnd(v){if(KV<=0)return;try{KAC=KAC||new(window.AudioContext||window.webkitAudioContext)();if(KAC.state==='suspended')KAC.resume();const t=KAC.currentTime,o=KAC.createOscillator(),g=KAC.createGain();o.type='sine';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(65,t+.09);g.gain.setValueAtTime(KV*v*.6,t);g.gain.exponentialRampToValueAtTime(.001,t+.13);o.connect(g);g.connect(KAC.destination);o.start(t);o.stop(t+.14)}catch(e){}}
 function warm(){const R=ros();for(const i in R){const q=R[i];if(q.gm>=0)fileUrl(PASS.tiers[q.gm]);if(q.im>=0)fileUrl(PASS.tiers[q.im])}}
 const eqIm=()=>BP?vt(BP.eq.s,'img'):-1,eqGm=()=>BP?vt(BP.eq.g,'gol'):-1;
 function syncEq(){if(isHost||(conn&&conn.open))A('eq',eqIm(),eqGm())}
@@ -422,24 +425,28 @@ function goalFx(t){const id=S.lt,p=PL[id];S.lt=null;if(!p)return;if(p.team!==t){
  sys('⚽ Gol de '+p.n);const g=vt(p.gm,'gol');if(g>=0){const o={t:'goal',g,n:p.n};all(o);playGoal(o)}}
 function playGoal(d){const r=PASS.tiers[d.g];if(!r||r.t!=='gol'||GV<=0)return;toast('🎵 '+(d.n||'')+' · '+r.n);GQ.push(r);if(!gBusy)gNext()}
 async function gNext(){clearTimeout(gT);clearInterval(gF);const r=GQ.shift();if(!r){gBusy=0;plVol();return}gBusy=1;plVol();const u=await fileUrl(r);if(!u)return gNext();
- GA.src=u;GA.volume=Math.min(1,GV);GA.play().then(()=>{gT=setTimeout(gFade,7000)}).catch(()=>gNext())}
+ const st=Math.max(0,+r.st||0),du=Math.max(2,Math.min(30,+r.du||8));GA._p=r.u||'archivo de Drive';GA.volume=Math.min(1,GV);
+ const go=()=>{try{GA.currentTime=st}catch(e){}GA.play().then(()=>{gT=setTimeout(gFade,Math.max(300,du*1000-1000))}).catch(e=>{if(e&&e.name==='NotAllowedError')toast('🔇 El navegador bloqueó el sonido: hacé click en el juego y probá de nuevo');gNext()})};
+ GA.onloadedmetadata=()=>{GA.onloadedmetadata=null;go()};GA.src=u}
+GA.onerror=()=>{toast('⚠ No se pudo cargar la música de gol: '+(GA._p||'')+' (revisá que la ruta exista en GitHub)');gNext()};
+PA.onerror=()=>toast('⚠ No se pudo cargar la playlist: '+(PLY[pI]?PLY[pI].u:''));
 function gFade(){let v=GA.volume;gF=setInterval(()=>{v-=.1*Math.max(.1,GV);if(v<=.02){clearInterval(gF);GA.pause();gNext()}else GA.volume=Math.max(0,v)},100)}
 GA.onended=()=>gNext();
 function pSound(pg){const sl=(lab,get,set)=>{const r=el('div',0,'bar'),i=el('input'),t=el('span',lab+': '+Math.round(get()*100)+'%');i.type='range';i.min=0;i.max=100;i.value=get()*100;i.style.width='170px';i.oninput=()=>{set(i.value/100);t.textContent=lab+': '+i.value+'%'};r.append(t,i);return r};
  const pb=el('div',0,'bar');pb.append(el('b','🎶 Playlist'),el('button',PON?'🔊 Sonando (apagar)':'🔇 Apagada (encender)',0,()=>{setPon(!PON);menu()}),el('button','⏭ Siguiente',0,()=>{plNext()}),el('span',PLY.length?PLY.length+' temas · ahora: '+(PLY[pI]?PLY[pI].n:'—'):'Sin temas: agregalos en la hoja (tipo playlist)'));
- pg.append(pb,sl('Volumen de la playlist',()=>PV,v=>{PV=v;sv('hx3pv',v);plVol()}),el('p','Música de gol','hint'),sl('Volumen de músicas de gol (0 = silencio)',()=>GV,v=>{GV=v;sv('hx3gv',v);GA.volume=Math.min(1,v)}),
+ pg.append(pb,sl('Volumen de la playlist',()=>PV,v=>{PV=v;sv('hx3pv',v);plVol()}),...(BP?[sl('Volumen de tu música personal (la del Locker)',()=>BP.vol,v=>{BP.vol=v;AU.volume=v;bpSave()})]:[el('p','Entrá con tu cuenta para regular tu música personal.','hint')]),sl('Volumen del golpe a la pelota (0 = sin sonido)',()=>KV,v=>{KV=v;sv('hx3kv',v)}),el('p','Música de gol','hint'),sl('Volumen de músicas de gol (0 = silencio)',()=>GV,v=>{GV=v;sv('hx3gv',v);GA.volume=Math.min(1,v)}),
  el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist baja el volumen mientras suena un gol y se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
 
 function pPass(pg){if(!BP)pg.append(el('p','Entrá con una cuenta (usuario y contraseña en la pantalla de inicio) para ganar XP y guardar tu progreso en el pase.','hint'));
  const lv=bpLv(),T=PASS.tiers,nx=BP&&lv<T.length?BP.xp%PASS.xp:0,h=el('div',0,'bar'),pb=el('div'),fl2=el('div');
  pb.style.cssText='flex:1;min-width:120px;height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden';fl2.style.cssText='height:100%;background:#ffd84d;width:'+nx/PASS.xp*100+'%';pb.append(fl2);h.append(el('b','Nivel '+lv+' / '+T.length),pb,el('span',nx+' / '+PASS.xp+' XP'));
  const g=el('div',0,'grid');T.forEach((r,i)=>{const ok=lv>i,got=BP&&BP.cl.includes(i),b=el('button',0,'cam'+(got?' on':''),()=>{if(!BP||!ok||got)return;BP.cl.push(i);bpSave();toast('🎒 '+r.n+' → locker');menu()});b.style.opacity=ok?1:.45;
-  b.append(el('b',RI[r.t]||'🎁'),el('span',r.n),el('small',String(i+1)),el('span',got?'✔ En tu locker':ok?'¡Reclamar!':'🔒 Nivel '+(i+1)));g.append(b)});
+  b.append(icoEl(r,RI[r.t]||'🎁'),el('span',r.n),el('small',String(i+1)),el('span',got?'✔ En tu locker':ok?'¡Reclamar!':'🔒 Nivel '+(i+1)));g.append(b)});
  pg.append(h,g,el('p','XP: +25 por gol de tu equipo, +100 si ganás el partido, +30 si perdés, +10 por minuto jugando. Tu progreso se guarda en tu cuenta y te sigue en cualquier dispositivo.','hint'))}
 function pLocker(pg){if(!BP)return pg.append(el('p','Entrá con una cuenta para tener tu locker.','hint'));
  const L=BP.cl.map(i=>[i,PASS.tiers[i]]).filter(x=>x[1]),g=el('div',0,'grid');if(!L.length)pg.append(el('div','Tu locker está vacío: reclamá premios en la pestaña Pase.','emp'));
  for(const[i,r]of L){const k=r.t,sk=k==='skin'||k==='img',on=sk?BP.eq.s===i:k==='gol'?BP.eq.g===i:BP.eq.m===i,b=el('button',0,'cam'+(on?' on':''),()=>sk?eqSkin(i):k==='gol'?eqGol(on?-1:i):eqMus(on?-1:i));
-  if(k==='skin'){const cv=skinCanvas((ros()[myId]||{}).team||1,sksan(r.s));cv.style.cssText='width:46px;height:46px';b.append(cv)}else if(k==='img'){const im=new Image();im.style.cssText='width:46px;height:46px;border-radius:50%;object-fit:cover';fileUrl(r).then(u=>{if(u)im.src=u});b.append(im)}else b.append(el('b',k==='gol'?'🥅':'🎵'));
+  if(r.ic)b.append(icoEl(r,'🎁'));else if(k==='skin'){const cv=skinCanvas((ros()[myId]||{}).team||1,sksan(r.s));cv.style.cssText='width:46px;height:46px';b.append(cv)}else if(k==='img'){const im=new Image();im.style.cssText='width:46px;height:46px;border-radius:50%;object-fit:cover';fileUrl(r).then(u=>{if(u)im.src=u});b.append(im)}else b.append(el('b',k==='gol'?'🥅':'🎵'));
   b.append(el('span',r.n),el('span',sk||k==='gol'?(on?'✔ Equipada':'Equipar'):(on?'⏹ Sonando':'▶ Reproducir')));g.append(b)}
  const v=el('input'),vr=el('div',0,'bar');v.type='range';v.min=0;v.max=100;v.value=BP.vol*100;v.oninput=()=>{BP.vol=v.value/100;AU.volume=BP.vol;bpSave()};vr.append('Volumen de la música',v);pg.append(g,vr)}
 // ---------- rendimiento ----------
@@ -460,7 +467,7 @@ function frame(t){requestAnimationFrame(frame);perfTick(t);bpWatch(t);const n=is
   ex+=q.ex||0;ey+=q.ey||0;
   const P=o.m.position,sr=sp?.55:(q.r||PR)/PR,e2=o.el=(o.el==null?el0:o.el+(el0-o.el)*.3);
   o.m.scale.set(sr,sr,sr);o.sh.scale.set(PR*sr,PR*sr,1);P.set(ex,e2+PR*sr,ey);o.sh.position.set(ex,e2+.5,ey);
-  {const ck=sp?3:r.team;if(o.ck!==ck){o.ck=ck;o.m.material.color.set(sp?0xb5bcc9:r.team==1?0xe8473f:0x3f7be8)}}o.ring.visible=id===myId;{const s=r.sk||[0,0,''],ti=r.im>=0&&PASS.tiers[r.im]&&PASS.tiers[r.im].t==='img'?r.im:-1,key=r.team+'|'+s.join('|')+'|'+ti;if(o.sk!==key){o.sk=key;if(o.cap){o.m.remove(o.cap);o.cap.material.map.dispose();o.cap=null}if(ti>=0){o.cap=imgCap(r.team,ti);o.m.add(o.cap)}else if(s[0]||s[2]){o.cap=mkCap(r.team,s);o.m.add(o.cap)}}}
+  {const ck=sp?3:r.team;if(o.ck!==ck){o.ck=ck;o.m.material.color.set(sp?0xb5bcc9:r.team==1?0xe8473f:0x3f7be8)}}if(!sp){const kc=(id===myId&&PR2&&PR2.P[id]?PR2.P[id].kc:q.kc)||0;if(kc>0&&!(o.pk>0)&&t-(o.ks||0)>150){o.ks=t;if(id===myId){o.fl=t+260;kickSnd(1)}else kickSnd(.4)}o.pk=kc}o.ring.visible=id===myId&&!(o.fl>t&&(t/60|0)%2);{const s=r.sk||[0,0,''],ti=r.im>=0&&PASS.tiers[r.im]&&PASS.tiers[r.im].t==='img'?r.im:-1,key=r.team+'|'+s.join('|')+'|'+ti;if(o.sk!==key){o.sk=key;if(o.cap){o.m.remove(o.cap);o.cap.material.map.dispose();o.cap=null}if(ti>=0){o.cap=imgCap(r.team,ti);o.m.add(o.cap)}else if(s[0]||s[2]){o.cap=mkCap(r.team,s);o.m.add(o.cap)}}}
   const nm=(r.admin?'★ ':'')+r.n;if(nm!==o.tx){if(o.lb){o.m.remove(o.lb);o.lb.material.map.dispose();o.lb.material.dispose()}o.lb=label(nm);o.m.add(o.lb);o.tx=nm}}
  for(const id in D)if((!S.p[id]&&!S.sp[id])||!R[id])rmP(id);
  camUpdate();R3.render(sc,cam);
