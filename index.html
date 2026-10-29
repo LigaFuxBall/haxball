@@ -4,7 +4,7 @@
 <style>
 :root{--bg:#0e1621;--pan:rgba(10,16,26,.82);--fg:#fff;--ac:#ffd84d}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;overflow:hidden}
-canvas{display:block;position:fixed;inset:0}
+canvas{display:block;position:fixed;inset:0}[hidden]{display:none!important}
 button{border:0;border-radius:6px;padding:7px 11px;background:#33415a;color:#fff;font-weight:600;cursor:pointer}
 button:hover{filter:brightness(1.2)}input{padding:7px;border-radius:6px;border:0;font-size:14px}
 .pan{background:var(--pan);border-radius:10px;padding:10px}
@@ -33,7 +33,7 @@ button:hover{filter:brightness(1.2)}input{padding:7px;border-radius:6px;border:0
 <button id="bc" style="background:#2e8b57">Crear sala</button>
 <div style="display:flex;gap:6px"><input id="cd" placeholder="Código de sala" style="flex:1"><button id="bj">Unirse</button></div>
 <div id="err"></div></div></div>
-<div id="code" class="pan" hidden><span id="cs"></span><button id="cp">Copiar link</button></div>
+<div id="code" class="pan" hidden><span id="cs"></span><span id="dbg" style="opacity:.75;font-size:12px"></span><button id="cp">Copiar link</button></div>
 <div id="top" class="pan" hidden></div><button id="mb" hidden>☰ Menú (Esc)</button>
 <div id="msg"></div>
 <div id="chat" hidden><div id="log"></div><input id="ci" maxlength="200" placeholder="Enter para chatear · /help para comandos"></div>
@@ -201,6 +201,7 @@ function frame(t){requestAnimationFrame(frame); const k=isHost?1:.35,B=ball.posi
  const f=Math.max(1,1.75/cam.aspect),cp=camP[camV];cam.position.lerp(new THREE.Vector3(cp[0]+S.b.x*.1,cp[1]*f,cp[2]*f),.06);cam.lookAt(S.b.x*.15,0,camV==1?0:10);R3.render(sc,cam);
  const tm=S.lim[1]?String(Math.floor(S.tm/60)).padStart(2,'0')+':'+String(S.tm%60|0).padStart(2,'0'):'∞';
  $('top').innerHTML='<span style="color:#ff6b61">ROJO '+S.s[0]+'</span> &nbsp;'+tm+'&nbsp; <span style="color:#6aa0ff">'+S.s[1]+' AZUL</span><small>'+(S.ot?'TIEMPO EXTRA · gol de oro':'')+'</small>';
+ {const q=S.p[myId];$('dbg').textContent='v6 · equipo '+(R[myId]?R[myId].team:'?')+' · entrada '+mi.x+','+mi.y+' · pos '+(q?(q.x|0)+','+(q.y|0):'-')+' · sim '+tk}
  $('msg').textContent=!S.run?(S.s[0]+S.s[1]||S.m?'Partida terminada':'Partida detenida')+' · el admin puede iniciar':S.pa?'⏸ PAUSA':BN[S.m]||((R[myId]&&!R[myId].team)?'Elegí equipo: Esc → Rojo / Azul (o escribí /red o /blue)':'')}
 let lt=performance.now(),ac2=0;
 function simTick(){const n=performance.now();ac2+=Math.min((n-lt)/1000,.25);lt=n;while(ac2>=1/60){ac2-=1/60;tk++;if(isHost){hostStep();if(tk%3==0)send()}else clientStep()}}
