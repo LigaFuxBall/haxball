@@ -399,7 +399,7 @@ function musAuto(){if(BP&&BP.eq.m>=0&&AU.paused)playMus(BP.eq.m)}
 addEventListener('pointerdown',musAuto);addEventListener('keydown',musAuto);
 // ---------- pase desde la hoja, playlist y música de gol ----------
 const FC={},ni=x=>Number.isInteger(x)?x:-1,vt=(i,t)=>PASS.tiers[i]&&PASS.tiers[i].t===t?i:-1,sv=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-let PASSOK=0,PLY=[],pI=-1,gBusy=0,gT=0,gF=0;const GQ=[],PA=new Audio(),GA=new Audio(),hasT=i=>!PASSOK||PASS.tiers[i];
+let PASSOK=0,PLY=[],pI=-1,gBusy=0,gT=0,gF=0;const GQ=[],PA=Object.assign(new Audio(),{crossOrigin:'anonymous'}),GA=new Audio(),hasT=i=>!PASSOK||PASS.tiers[i];
 let PV=+(localStorage.getItem('hx3pv')||.25),PON=localStorage.getItem('hx3po')!=='0',GV=+(localStorage.getItem('hx3gv')||.7);
 try{const c=JSON.parse(localStorage.getItem('hx3pass'));if(c&&c.tiers&&c.tiers.length){PASS={xp:c.xp,tiers:c.tiers};PLY=c.pl||[];PASSOK=1}}catch(e){}
 function fileUrl(r){if(!r)return Promise.resolve('');if(r.u)return Promise.resolve(r.u);if(!r.f)return Promise.resolve('');
@@ -413,8 +413,21 @@ function syncEq(){if(isHost||(conn&&conn.open))A('eq',eqIm(),eqGm())}
 async function passPull(){const r=await srv('pass');if(r&&r.tiers&&r.tiers.length){PASS={xp:+r.xp||100,tiers:r.tiers};PLY=r.pl||[];PASSOK=1;sv('hx3pass',JSON.stringify({xp:PASS.xp,tiers:PASS.tiers,pl:PLY}))}
  try{loadBP()}catch(e){}if(isHost)bro();else syncEq();plStart();warm();if($('menu').classList.contains('on'))menu()}
 // playlist de fondo
-function plVol(){PA.volume=Math.max(0,Math.min(1,PV*(gBusy?.35:1)))}
-function plSync(){if(PON&&AU.paused&&PA.src){if(PA.paused)PA.play().catch(()=>{})}else PA.pause()}
+function plVol(){PA.volume=Math.max(0,Math.min(1,PV))}
+function actx(){KAC=KAC||new(window.AudioContext||window.webkitAudioContext)();if(KAC.state==='suspended')KAC.resume();return KAC}
+// playlist como si saliera de los parlantes del estadio (audio 3D + eco + se apaga con la distancia)
+let SPG=0;const SV=new THREE.Vector3(),SU=new THREE.Vector3(),setPos=(p,x,y,z)=>{if(p.positionX){p.positionX.value=x;p.positionY.value=y;p.positionZ.value=z}else p.setPosition(x,y,z)};
+function sp3d(){if(SPG!==0)return;SPG=null;try{const c=actx(),mob=/Mobi|Android/i.test(navigator.userAgent);
+ const mk=x=>{const p=c.createPanner();p.panningModel=mob?'equalpower':'HRTF';p.distanceModel='inverse';p.refDistance=380;p.rolloffFactor=1.1;p.maxDistance=8000;setPos(p,x,90,0);return p};
+ const a=mk(-HW-80),b=mk(HW+80),lp=c.createBiquadFilter(),dry=c.createGain(),wet=c.createGain(),cv=c.createConvolver(),n=c.sampleRate*1.8|0,ir=c.createBuffer(2,n,c.sampleRate);
+ for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3)}
+ cv.buffer=ir;lp.type='lowpass';lp.frequency.value=16000;dry.gain.value=1.5;wet.gain.value=.45;
+ lp.connect(dry);lp.connect(cv);cv.connect(wet);dry.connect(c.destination);wet.connect(c.destination);a.connect(lp);b.connect(lp);
+ const src=c.createMediaElementSource(PA);src.connect(a);src.connect(b);SPG={c,lp}}catch(e){SPG=null}}
+function spUpd(){if(!SPG)return;const L=SPG.c.listener,P=cam.position;cam.getWorldDirection(SV);SU.set(0,1,0).applyQuaternion(cam.quaternion);
+ if(L.positionX){L.positionX.value=P.x;L.positionY.value=P.y;L.positionZ.value=P.z;L.forwardX.value=SV.x;L.forwardY.value=SV.y;L.forwardZ.value=SV.z;L.upX.value=SU.x;L.upY.value=SU.y;L.upZ.value=SU.z}else{L.setPosition(P.x,P.y,P.z);L.setOrientation(SV.x,SV.y,SV.z,SU.x,SU.y,SU.z)}
+ SPG.lp.frequency.value=Math.max(1800,16000-Math.max(0,Math.hypot(P.x,P.y,P.z)-350)*20)}
+function plSync(){if(PON&&AU.paused&&!gBusy&&PA.src){sp3d();if(PA.paused)PA.play().catch(()=>{})}else PA.pause()}
 async function plNext(k){if(!PLY.length)return;pI=(pI<0?Math.random()*PLY.length|0:pI+1)%PLY.length;const u=await fileUrl(PLY[pI]);if(!u)return(k|0)<PLY.length?plNext((k|0)+1):0;if(PA._u!==u){PA._u=u;PA.src=u}plVol();plSync()}
 function plStart(){if(PON&&PLY.length&&!PA.src)plNext()}
 function setPon(v){PON=v;sv('hx3po',v?1:0);if(v)plStart();plSync()}
@@ -424,7 +437,7 @@ const plKick=()=>{plStart();plSync()};addEventListener('pointerdown',plKick);add
 function goalFx(t){const id=S.lt,p=PL[id];S.lt=null;if(!p)return;if(p.team!==t){sys('😅 Autogol de '+p.n);return}
  sys('⚽ Gol de '+p.n);const g=vt(p.gm,'gol');if(g>=0){const o={t:'goal',g,n:p.n};all(o);playGoal(o)}}
 function playGoal(d){const r=PASS.tiers[d.g];if(!r||r.t!=='gol'||GV<=0)return;toast('🎵 '+(d.n||'')+' · '+r.n);GQ.push(r);if(!gBusy)gNext()}
-async function gNext(){clearTimeout(gT);clearInterval(gF);const r=GQ.shift();if(!r){gBusy=0;plVol();return}gBusy=1;plVol();const u=await fileUrl(r);if(!u)return gNext();
+async function gNext(){clearTimeout(gT);clearInterval(gF);const r=GQ.shift();if(!r){gBusy=0;plVol();plSync();return}gBusy=1;plVol();plSync();const u=await fileUrl(r);if(!u)return gNext();
  const st=Math.max(0,+r.st||0),du=Math.max(2,Math.min(30,+r.du||8));GA._p=r.u||'archivo de Drive';GA.volume=Math.min(1,GV);
  const go=()=>{try{GA.currentTime=st}catch(e){}GA.play().then(()=>{gT=setTimeout(gFade,Math.max(300,du*1000-1000))}).catch(e=>{if(e&&e.name==='NotAllowedError')toast('🔇 El navegador bloqueó el sonido: hacé click en el juego y probá de nuevo');gNext()})};
  GA.onloadedmetadata=()=>{GA.onloadedmetadata=null;go()};GA.src=u}
@@ -435,7 +448,7 @@ GA.onended=()=>gNext();
 function pSound(pg){const sl=(lab,get,set)=>{const r=el('div',0,'bar'),i=el('input'),t=el('span',lab+': '+Math.round(get()*100)+'%');i.type='range';i.min=0;i.max=100;i.value=get()*100;i.style.width='170px';i.oninput=()=>{set(i.value/100);t.textContent=lab+': '+i.value+'%'};r.append(t,i);return r};
  const pb=el('div',0,'bar');pb.append(el('b','🎶 Playlist'),el('button',PON?'🔊 Sonando (apagar)':'🔇 Apagada (encender)',0,()=>{setPon(!PON);menu()}),el('button','⏭ Siguiente',0,()=>{plNext()}),el('span',PLY.length?PLY.length+' temas · ahora: '+(PLY[pI]?PLY[pI].n:'—'):'Sin temas: agregalos en la hoja (tipo playlist)'));
  pg.append(pb,sl('Volumen de la playlist',()=>PV,v=>{PV=v;sv('hx3pv',v);plVol()}),...(BP?[sl('Volumen de tu música personal (la del Locker)',()=>BP.vol,v=>{BP.vol=v;AU.volume=v;bpSave()})]:[el('p','Entrá con tu cuenta para regular tu música personal.','hint')]),sl('Volumen del golpe a la pelota (0 = sin sonido)',()=>KV,v=>{KV=v;sv('hx3kv',v)}),el('p','Música de gol','hint'),sl('Volumen de músicas de gol (0 = silencio)',()=>GV,v=>{GV=v;sv('hx3gv',v);GA.volume=Math.min(1,v)}),
- el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist baja el volumen mientras suena un gol y se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
+ el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist suena como si saliera de los parlantes del estadio (se oye de costado y más fuerte o más lejana según dónde estés), se pausa mientras suena una música de gol y vuelve donde quedó; también se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
 
 function pPass(pg){if(!BP)pg.append(el('p','Entrá con una cuenta (usuario y contraseña en la pantalla de inicio) para ganar XP y guardar tu progreso en el pase.','hint'));
  const lv=bpLv(),T=PASS.tiers,nx=BP&&lv<T.length?BP.xp%PASS.xp:0,h=el('div',0,'bar'),pb=el('div'),fl2=el('div');
@@ -470,7 +483,7 @@ function frame(t){requestAnimationFrame(frame);perfTick(t);bpWatch(t);const n=is
   {const ck=sp?3:r.team;if(o.ck!==ck){o.ck=ck;o.m.material.color.set(sp?0xb5bcc9:r.team==1?0xe8473f:0x3f7be8)}}if(!sp){const kc=(id===myId&&PR2&&PR2.P[id]?PR2.P[id].kc:q.kc)||0;if(kc>0&&!(o.pk>0)&&t-(o.ks||0)>150){o.ks=t;if(id===myId){o.fl=t+260;kickSnd(1)}else kickSnd(.4)}o.pk=kc}o.ring.visible=id===myId&&!(o.fl>t&&(t/60|0)%2);{const s=r.sk||[0,0,''],ti=r.im>=0&&PASS.tiers[r.im]&&PASS.tiers[r.im].t==='img'?r.im:-1,key=r.team+'|'+s.join('|')+'|'+ti;if(o.sk!==key){o.sk=key;if(o.cap){o.m.remove(o.cap);o.cap.material.map.dispose();o.cap=null}if(ti>=0){o.cap=imgCap(r.team,ti);o.m.add(o.cap)}else if(s[0]||s[2]){o.cap=mkCap(r.team,s);o.m.add(o.cap)}}}
   const nm=(r.admin?'★ ':'')+r.n;if(nm!==o.tx){if(o.lb){o.m.remove(o.lb);o.lb.material.map.dispose();o.lb.material.dispose()}o.lb=label(nm);o.m.add(o.lb);o.tx=nm}}
  for(const id in D)if((!S.p[id]&&!S.sp[id])||!R[id])rmP(id);
- camUpdate();R3.render(sc,cam);
+ camUpdate();spUpd();R3.render(sc,cam);
  const tm=S.lim[1]?String(Math.floor(S.tm/60)).padStart(2,'0')+':'+String(S.tm%60|0).padStart(2,'0'):'∞';
  stx('top',eTop,'<span style="color:#ff6b61">ROJO '+S.s[0]+'</span> &nbsp;'+tm+'&nbsp; <span style="color:#6aa0ff">'+S.s[1]+' AZUL</span><small>'+(S.ot?'TIEMPO EXTRA · gol de oro':'')+'</small>',1);
  {const rr=R[myId],kk=rr?rr.pw:-1,w=ePw,q0=S.p[myId];w.hidden=!(kk>=0);if(kk>=0)stx('pw',w,PWR[kk][0]+' '+PWR[kk][1]+' · ['+kn(KB.power[0])+'] '+((q0&&q0.cd)?q0.cd+'s':'¡listo!'))}
