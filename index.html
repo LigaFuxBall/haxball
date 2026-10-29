@@ -67,6 +67,22 @@ button{border-radius:9px;background:rgba(255,255,255,.1);font:600 13px system-ui
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script>
+// ================= PASE DE BATALLA: editá acá =================
+// xp = XP por nivel. Cada nivel da UN premio, en orden. Tipos:
+//  {t:'skin',n:'Nombre',s:[patrón 0-5, color 0-7, 'avatar 1-2 caracteres/emoji']}
+//  {t:'music',n:'Nombre',u:'music/archivo.mp3'}  (subí el mp3 junto al index.html o usá un link directo)
+const PASS={xp:100,tiers:[
+ {t:'skin',n:'Fuego',s:[1,3,'🔥']},
+ {t:'music',n:'Tema de ejemplo 1',u:'music/tema1.mp3'},
+ {t:'skin',n:'Rayo',s:[2,1,'⚡']},
+ {t:'skin',n:'Galaxia',s:[4,7,'🌌']},
+ {t:'music',n:'Tema de ejemplo 2',u:'music/tema2.mp3'},
+ {t:'skin',n:'Hielo',s:[5,4,'❄']},
+ {t:'skin',n:'Tóxico',s:[3,5,'☢']},
+ {t:'skin',n:'Corona',s:[0,1,'👑']},
+ {t:'skin',n:'Sombra',s:[1,2,'💀']},
+ {t:'skin',n:'Estrella',s:[4,6,'⭐']}]};
+// ===============================================================
 const HW=370,HH=170,GH=64,GD=36,PR=15,BR=7,$=id=>document.getElementById(id);
 const el=(t,x,c,f)=>{const e=document.createElement(t);if(x)e.textContent=x;if(c)e.className=c;if(f)e.onclick=f;return e};
 const S={b:{x:0,y:0,vx:0,vy:0},p:{},sp:{},s:[0,0],m:0,fr:0,over:0,run:0,pa:0,tm:180,ot:0,lim:[3,3]};
@@ -77,14 +93,14 @@ const myName=()=>ACC?ACC.n:($('nm').value.trim()||'Jugador'+(10+Math.random()*89
 const err=m=>{$('err').textContent=m};
 // ---------- cuentas ----------
 const ADMIN_NAME='Masy',ADMIN_VER='fd38620fc4030532d151d2ad45a38e6332e039755d4151fb9ff1e0382c813af8';
-let ACC=null,JC='',joined=0;
+let ACC=null,JC='',joined=0,BP=null;
 const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''),enc=s=>new TextEncoder().encode(s);
 const sha=async s=>hex(await crypto.subtle.digest('SHA-256',enc(s)));
 const dk=async(n,p)=>hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc('hx3d|'+n.toLowerCase()),iterations:100000},await crypto.subtle.importKey('raw',enc(p),'PBKDF2',false,['deriveBits']),256));
 window.mkHash=async p=>sha(await dk(ADMIN_NAME,p)); // consola: await mkHash('tu clave') -> pegalo en ADMIN_VER
 const ldj=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},svj=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const REG=ldj('hx3reg',{}),isAdm=n=>String(n).toLowerCase()===ADMIN_NAME.toLowerCase();
-function syncAcc(){const a=!!ACC;$('who').textContent=a?'👤 '+ACC.n+(ACC.adm?' ★ admin':''):'Invitado · con usuario y contraseña tenés cuenta';for(const i of['nm','pwd','ab'])$(i).hidden=a;$('bo').hidden=!a}
+function syncAcc(){const a=!!ACC;$('who').textContent=a?'👤 '+ACC.n+(ACC.adm?' ★ admin':''):'Invitado · con usuario y contraseña tenés cuenta';for(const i of['nm','pwd','ab'])$(i).hidden=a;$('bo').hidden=!a;try{loadBP();if(!BP)AU.pause()}catch(e){}}
 async function doAuth(reg){const n=$('nm').value.trim().slice(0,14),p=$('pwd').value;if(n.length<2)return err('Poné tu usuario');if(!p)return err('Poné la contraseña');if(!(window.crypto&&crypto.subtle))return err('Las cuentas necesitan https (en GitHub Pages anda)');
  err('Verificando...');try{const k=await dk(n,p),v=await sha(k),nl=n.toLowerCase(),L=ldj('hx3acc',{});
   if(isAdm(n)){if(reg)return err('Ese usuario está reservado');if(v!==ADMIN_VER)return err('Contraseña incorrecta');ACC={n:ADMIN_NAME,k,adm:1}}
@@ -177,7 +193,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeou
 function setCam(i){if(i===5&&camV!==5)fy=Math.atan2(hv.z,hv.x);if(i!==5&&document.pointerLockElement)document.exitPointerLock();camV=i;toast('Cámara: '+CAMS[i][1]+' ('+(i+1)+')');if(window.menu&&$('menu').classList.contains('on'))menu()}
 const ib=(t,tt,f)=>{const b=el('button',t,'ic',f);b.title=tt;return b};
 function menu(){const R=ros(),me=R[myId],ad=me&&me.admin,t=$('tabs'),pg=$('pg');t.textContent='';pg.textContent='';if(tab===4&&!ad)tab=0;
- ['👥 Equipos','🎥 Cámara','⌨️ Controles','🎨 Skin','⚙️ Partida'].forEach((n,i)=>{if(i===4&&!ad)return;t.append(el('button',n,i===tab?'tab on':'tab',()=>{tab=i;menu()}))});
+ ['👥 Equipos','🎥 Cámara','⌨️ Controles','🎨 Skin','⚙️ Partida','🎟 Pase','🎒 Locker'].forEach((n,i)=>{if(i===4&&!ad)return;t.append(el('button',n,i===tab?'tab on':'tab',()=>{tab=i;menu()}))});
  if(tab===0){const w=el('div',0,'cols');
   for(const tm of[1,0,2]){const c=el('div',0,'col t'+tm),L=Object.values(R).filter(p=>p.team===tm);c.append(el('div',TN[tm]+' · '+L.length,'ch'+tm));
    for(const p of L){const h=el('div',0,'pl'),a=el('div',0,'acts');h.append(el('i',(p.n[0]||'?').toUpperCase(),'av'),el('span',(p.admin?'★ ':'')+p.n+(p.pw>=0?' '+PWR[p.pw][0]:''),'nm'));
@@ -189,7 +205,7 @@ function menu(){const R=ros(),me=R[myId],ad=me&&me.admin,t=$('tabs'),pg=$('pg');
  else if(tab===1){const g=el('div',0,'grid');CAMS.forEach((c,i)=>{const b=el('button',0,'cam'+(i===camV?' on':''),()=>setCam(i));b.append(el('b',c[0]),el('span',c[1]),el('small',String(i+1)));g.append(b)});
   pg.append(g,el('p','Cambiá con C o con las teclas 1 a 6. En 1ª y 3ª persona, W va hacia adelante según lo que ves. En 1ª libre la vista no sigue la pelota: hacé click y mové el mouse (o arrastrá el dedo en la mitad derecha) para mirar. Si sos espectador caminás por las gradas con WASD y también podés usar 1ª y 3ª persona.','hint'))}
  else if(tab===2)ctl(pg);
- else if(tab===3)pSkin(pg);
+ else if(tab===3)pSkin(pg);else if(tab===5)pPass(pg);else if(tab===6)pLocker(pg);
  else{const g=el('div',0,'grid');for(const[i,t2,a]of[['▶️','Iniciar','start'],['⏹','Parar','stop'],['⏸','Pausa','pause'],['🔀','Mezclar','shuffle'],['🔁','Intercambiar','swap'],['🧹','Vaciar','clear'],['⚡','Poderes','pw'],['🚫','Sin poderes','pwoff']]){const b=el('button',0,'cam',()=>A(a==='pwoff'?'pw':a,a==='pwoff'?'off':undefined));b.append(el('b',i),el('span',t2));g.append(b)}
   const f=el('div',0,'bar'),G=el('input'),M=el('input');G.type=M.type='number';G.value=S.lim[0];M.value=S.lim[1];f.append('Goles',G,'Minutos',M,el('button','Aplicar','pri',()=>A('lim',+G.value,+M.value)));pg.append(g,f)}}
 // ---------- física (solo el anfitrión) ----------
@@ -318,7 +334,8 @@ let EXT=+(localStorage.getItem('hx3e')||0)||0,PING=0;
 function setExt(v){EXT=Math.max(0,Math.min(200,Math.round(v)||0));try{localStorage.setItem('hx3e',EXT)}catch(e){}}
 function predict(n){const b={x:S.b.x,y:S.b.y,vx:S.b.vx,vy:S.b.vy},P={},L=[];for(const id in S.p){const q=S.p[id],c={x:q.x,y:q.y,vx:q.vx,vy:q.vy,r:q.r||PR,ef:q.ef||0,fz:q.fz||0,kc:q.kc||0,in:id===myId?mi:(q.in||{})};P[id]=c;L.push(c)}for(let i=0;i<n;i++)phys(b,L);return{b,P}}
 const autoExt=()=>isHost?0:Math.min(200,Math.round((PING/2+25)/10)*10);
-function localCmd(v){const m=v.trim().match(/^\/(extrap\w*|ping)\s*(-?\d+|auto)?$/i);if(!m)return 0;const L=t=>show({m:t,c:'#ffd84d'});
+function localCmd(v){const m=v.trim().match(/^\/(extrap\w*|ping|xp)\s*(-?\d+|auto)?$/i);if(!m)return 0;const L=t=>show({m:t,c:'#ffd84d'});
+ if(m[1].toLowerCase()==='xp'){if(BP&&ACC&&ACC.adm){bpAdd(+m[2]||0);L('XP del pase: '+BP.xp)}else L('Solo el admin con cuenta puede usar /xp');return 1}
  if(m[1].toLowerCase()==='ping')L(isHost?'Sos el anfitrión: no tenés ping.':'Ping: '+PING+' ms');else if(m[2]===undefined)L('Extrapolación actual: '+EXT+' ms. Usá /extrapolation 0-200');
  else{setExt(/auto/i.test(m[2])?autoExt():+m[2]);L('Extrapolación: '+EXT+' ms'+(isHost?' (no afecta al anfitrión)':''))}return 1}
 function extUI(c){const ex=el('div',0,'bar'),sl=el('input'),lb=el('span','Extrapolación: '+EXT+' ms');sl.type='range';sl.min=0;sl.max=200;sl.step=10;sl.value=EXT;sl.style.width='170px';sl.oninput=()=>{setExt(+sl.value);lb.textContent='Extrapolación: '+EXT+' ms'};ex.append(lb,sl,el('button','Auto',0,()=>{setExt(autoExt());sl.value=EXT;lb.textContent='Extrapolación: '+EXT+' ms'}));
@@ -345,6 +362,30 @@ function camUpdate(){const q=S.p[myId]||S.sp[myId],B=S.b,eh=S.p[myId]||!q?0:stH(
  cam.position.copy(camPos);cam.lookAt(camLk);sky.position.copy(camPos);sky.rotation.y+=.00004;
  let fv=FOV[m];if(m===3&&cam.aspect<1)fv=Math.min(95,fv/Math.sqrt(Math.max(.5,cam.aspect)));
  if(cam.fov!==fv){cam.fov=fv;cam.updateProjectionMatrix()}const o=D[myId];if(o)o.m.visible=m!==4&&m!==5}
+// ---------- pase de batalla ----------
+const AU=new Audio(),RI={skin:'🎨',music:'🎵'};AU.loop=true;let bpM=0,bpT=0;
+const bpLv=()=>BP?Math.min(PASS.tiers.length,Math.floor(BP.xp/PASS.xp)):0,bpKey=()=>'hx3bp|'+ACC.n.toLowerCase(),bpSave=()=>{if(BP&&ACC)svj(bpKey(),BP)};
+function loadBP(){BP=null;if(!ACC)return;const d=ldj(bpKey(),0)||{},e=d.eq||{};BP={xp:+d.xp||0,cl:Array.isArray(d.cl)?d.cl.filter(i=>PASS.tiers[i]):[],eq:{s:e.s==null?-1:e.s,m:e.m==null?-1:e.m},vol:d.vol==null?.5:+d.vol};AU.volume=BP.vol}
+function bpAdd(n){if(!BP||!n)return;const a=bpLv();BP.xp=Math.max(0,Math.min(PASS.tiers.length*PASS.xp,BP.xp+n));bpSave();toast((n>0?'+':'')+n+' XP');if(bpLv()>a)setTimeout(()=>toast('🎟 ¡Nivel '+bpLv()+' del pase!'),1900);if(tab===5&&$('menu').classList.contains('on'))menu()}
+function bpWatch(t){if(!BP)return;const tm=(ros()[myId]||{}).team;if(S.m!==bpM){const m=S.m;bpM=m;if(tm){if((m===1||m===2)&&m===tm)bpAdd(25);else if(m===3||m===4)bpAdd(m-2===tm?100:30)}}
+ if(t-bpT>60000){bpT=t;if(tm&&S.run&&!S.pa)bpAdd(10)}}
+function playMus(i){const r=PASS.tiers[i];if(!r||r.t!=='music')return;if(AU._u!==r.u){AU._u=r.u;AU.src=r.u}AU.volume=BP?BP.vol:.5;AU.play().catch(()=>toast('No se pudo reproducir: revisá que exista el archivo'))}
+function eqMus(i){if(!BP)return;BP.eq.m=i;if(i<0)AU.pause();else playMus(i);bpSave();menu()}
+function eqSkin(i){const s=PASS.tiers[i].s;BP.eq.s=i;bpSave();svj('hx3s',s);MYSK=sksan(s);A('skin',[MYSK[0],MYSK[1]],MYSK[2]);menu()}
+function musAuto(){if(BP&&BP.eq.m>=0&&AU.paused)playMus(BP.eq.m)}
+addEventListener('pointerdown',musAuto);addEventListener('keydown',musAuto);
+function pPass(pg){if(!BP)pg.append(el('p','Entrá con una cuenta (usuario y contraseña en la pantalla de inicio) para ganar XP y guardar tu progreso en el pase.','hint'));
+ const lv=bpLv(),T=PASS.tiers,nx=BP&&lv<T.length?BP.xp%PASS.xp:0,h=el('div',0,'bar'),pb=el('div'),fl2=el('div');
+ pb.style.cssText='flex:1;min-width:120px;height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden';fl2.style.cssText='height:100%;background:#ffd84d;width:'+nx/PASS.xp*100+'%';pb.append(fl2);h.append(el('b','Nivel '+lv+' / '+T.length),pb,el('span',nx+' / '+PASS.xp+' XP'));
+ const g=el('div',0,'grid');T.forEach((r,i)=>{const ok=lv>i,got=BP&&BP.cl.includes(i),b=el('button',0,'cam'+(got?' on':''),()=>{if(!BP||!ok||got)return;BP.cl.push(i);bpSave();toast('🎒 '+r.n+' → locker');menu()});b.style.opacity=ok?1:.45;
+  b.append(el('b',RI[r.t]||'🎁'),el('span',r.n),el('small',String(i+1)),el('span',got?'✔ En tu locker':ok?'¡Reclamar!':'🔒 Nivel '+(i+1)));g.append(b)});
+ pg.append(h,g,el('p','XP: +25 por gol de tu equipo, +100 si ganás el partido, +30 si perdés, +10 por minuto jugando. El progreso se guarda en este navegador, ligado a tu cuenta.','hint'))}
+function pLocker(pg){if(!BP)return pg.append(el('p','Entrá con una cuenta para tener tu locker.','hint'));
+ const L=BP.cl.map(i=>[i,PASS.tiers[i]]),g=el('div',0,'grid');if(!L.length)pg.append(el('div','Tu locker está vacío: reclamá premios en la pestaña Pase.','emp'));
+ for(const[i,r]of L){const sk=r.t==='skin',on=sk?BP.eq.s===i:BP.eq.m===i,b=el('button',0,'cam'+(on?' on':''),()=>sk?eqSkin(i):eqMus(on?-1:i));
+  if(sk){const cv=skinCanvas((ros()[myId]||{}).team||1,sksan(r.s));cv.style.cssText='width:46px;height:46px';b.append(cv)}else b.append(el('b','🎵'));
+  b.append(el('span',r.n),el('span',sk?(on?'Equipada':'Equipar'):(on?'⏹ Sonando':'▶ Reproducir')));g.append(b)}
+ const v=el('input'),vr=el('div',0,'bar');v.type='range';v.min=0;v.max=100;v.value=BP.vol*100;v.oninput=()=>{BP.vol=v.value/100;AU.volume=BP.vol;bpSave()};vr.append('Volumen de la música',v);pg.append(g,vr)}
 // ---------- rendimiento ----------
 let lf=0,fa=0,fn=0,gd=0,lu=-1e9,ld=0;const _tx={},eTop=$('top'),eMsg=$('msg'),ePw=$('pw'),eDbg=$('dbg');
 const stx=(k,e,v,h)=>{if(_tx[k]===v)return;_tx[k]=v;if(h)e.innerHTML=v;else e.textContent=v};
@@ -353,7 +394,7 @@ function perfTick(t){const dt=t-lf;lf=t;if(!dt||dt>250||document.hidden)return;f
  else if(a<19&&prCur<prMax){if(++gd>=8){gd=0;lu=t;setPR(Math.min(prMax,prCur+.1))}}else gd=0}
 function rmP(id){const o=D[id];if(!o)return;sc.remove(o.m,o.sh);if(o.lb){o.lb.material.map.dispose();o.lb.material.dispose()}if(o.cap){o.cap.material.map.dispose();o.cap.material.dispose()}o.m.material.dispose();delete D[id]}
 let last=0,acc=0;
-function frame(t){requestAnimationFrame(frame);perfTick(t);const n=isHost||!S.run||S.pa?0:Math.round(EXT/16.67),PR2=n?predict(n):null,bb=PR2?PR2.b:S.b,B=ball.position,nx=bb.x+(S.b.ex||0),nz=bb.y+(S.b.ey||0);
+function frame(t){requestAnimationFrame(frame);perfTick(t);bpWatch(t);const n=isHost||!S.run||S.pa?0:Math.round(EXT/16.67),PR2=n?predict(n):null,bb=PR2?PR2.b:S.b,B=ball.position,nx=bb.x+(S.b.ex||0),nz=bb.y+(S.b.ey||0);
  ball.rotation.z-=(nx-B.x)/BR;ball.rotation.x+=(nz-B.z)/BR;B.set(nx,BR,nz);bsh.position.x=nx;bsh.position.z=nz;
  const R=ros(),items=[];for(const id in S.p)items.push([id,S.p[id],0]);for(const id in S.sp)items.push([id,S.sp[id],1]);
  for(const[id,q,sp]of items){const r=R[id];if(!r)continue;let o=D[id];if(o&&o.sp!==sp){rmP(id);o=0}if(!o){o=D[id]=mk();o.sp=sp;sc.add(o.m)}
