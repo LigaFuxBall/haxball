@@ -93,7 +93,7 @@ const myName=()=>ACC?ACC.n:($('nm').value.trim()||'Jugador'+(10+Math.random()*89
 const err=m=>{$('err').textContent=m};
 // ---------- cuentas ----------
 const ADMIN_NAME='Masy',ADMIN_VER='fd38620fc4030532d151d2ad45a38e6332e039755d4151fb9ff1e0382c813af8';
-let ACC=null,JC='',joined=0,BP=null;
+let ACC=null,JC='',joined=0,BP=null,SRVP=null;
 const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''),enc=s=>new TextEncoder().encode(s);
 const sha=async s=>hex(await crypto.subtle.digest('SHA-256',enc(s)));
 const dk=async(n,p)=>hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc('hx3d|'+n.toLowerCase()),iterations:100000},await crypto.subtle.importKey('raw',enc(p),'PBKDF2',false,['deriveBits']),256));
@@ -102,14 +102,20 @@ const ldj=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){ret
 const REG=ldj('hx3reg',{}),isAdm=n=>String(n).toLowerCase()===ADMIN_NAME.toLowerCase();
 function syncAcc(){const a=!!ACC;$('who').textContent=a?'👤 '+ACC.n+(ACC.adm?' ★ admin':''):'Invitado · con usuario y contraseña tenés cuenta';for(const i of['nm','pwd','ab'])$(i).hidden=a;$('bo').hidden=!a;try{loadBP();if(!BP)AU.pause()}catch(e){}}
 async function doAuth(reg){const n=$('nm').value.trim().slice(0,14),p=$('pwd').value;if(n.length<2)return err('Poné tu usuario');if(!p)return err('Poné la contraseña');if(!(window.crypto&&crypto.subtle))return err('Las cuentas necesitan https (en GitHub Pages anda)');
- err('Verificando...');try{const k=await dk(n,p),v=await sha(k),nl=n.toLowerCase(),L=ldj('hx3acc',{});
-  if(isAdm(n)){if(reg)return err('Ese usuario está reservado');if(v!==ADMIN_VER)return err('Contraseña incorrecta');ACC={n:ADMIN_NAME,k,adm:1}}
-  else{if(reg){if(L[nl])return err('Ya existe esa cuenta: usá Entrar');if(p.length<4)return err('Contraseña: mínimo 4 caracteres');L[nl]=v;svj('hx3acc',L)}
-   else{if(!L[nl])return err('No hay cuenta '+n+' en este navegador. Usá Registrarme (si ya la tenés en otro dispositivo, poné el mismo usuario y contraseña)');if(L[nl]!==v)return err('Contraseña incorrecta')}ACC={n,k,adm:0}}
+ err('Verificando...');try{const k=await dk(n,p),v=await sha(k),nl=n.toLowerCase(),L=ldj('hx3acc',{}),adm=isAdm(n);
+  if(adm){if(reg)return err('Ese usuario está reservado');if(v!==ADMIN_VER)return err('Contraseña incorrecta')}
+  else if(reg){if(L[nl])return err('Ya existe esa cuenta en este navegador: usá Entrar');if(p.length<4)return err('Contraseña: mínimo 4 caracteres')}
+  else if(L[nl]&&L[nl]!==v)return err('Contraseña incorrecta');
+  err('Conectando con el servidor del pase...');
+  let r=await srv(reg&&!adm?'reg':'login',n,v);
+  if(r.net){if(!adm&&(reg||!L[nl]))return err('Sin conexión con el servidor. Probá de nuevo')}
+  else if(r.err){if(/No existe esa cuenta/.test(r.err)&&(adm||L[nl])){r=await srv('reg',n,v);if(r.err&&!r.net)return err(r.err)}else return err(r.err)}
+  if(!adm){L[nl]=v;svj('hx3acc',L)}
+  ACC={n:adm?ADMIN_NAME:n,k,adm:adm?1:0};SRVP=r.p||null;
   svj('hx3a',{n:ACC.n,k});$('pwd').value='';err('');syncAcc()}catch(e){err('Error de cuenta')}}
 const gOK=()=>{if(ACC)return 1;const n=$('nm').value.trim().toLowerCase();if(isAdm(n)){err('Ese nombre está reservado: entrá con la cuenta');return 0}if(ldj('hx3acc',{})[n]){err('Ese nombre tiene cuenta: poné la contraseña y tocá Entrar');return 0}return 1};
 $('bl').onclick=()=>doAuth(0);$('br').onclick=()=>doAuth(1);$('bo').onclick=()=>{ACC=null;try{localStorage.removeItem('hx3a')}catch(e){}syncAcc()};
-(async()=>{try{const t=ldj('hx3a',0);if(t&&t.n&&t.k){const v=await sha(t.k),a=isAdm(t.n);if(a?v===ADMIN_VER:ldj('hx3acc',{})[t.n.toLowerCase()]===v)ACC={n:a?ADMIN_NAME:t.n,k:t.k,adm:a?1:0}}}catch(e){}syncAcc()})();
+(async()=>{try{const t=ldj('hx3a',0);if(t&&t.n&&t.k){const v=await sha(t.k),a=isAdm(t.n);if(a?v===ADMIN_VER:ldj('hx3acc',{})[t.n.toLowerCase()]===v)ACC={n:a?ADMIN_NAME:t.n,k:t.k,adm:a?1:0}}}catch(e){}syncAcc();bpPull()})();
 // ---------- red ----------
 function enter(code){$('lobby').style.display='none';for(const i of['code','top','mb','chat'])$(i).hidden=false;
  $('cs').textContent='Sala: '+code;const l=location.href.split('#')[0]+'#'+code;$('cp').onclick=()=>navigator.clipboard&&navigator.clipboard.writeText(l).then(()=>say({t:'msg',m:'Link copiado',c:'#ffd84d'},myId))}
@@ -363,9 +369,19 @@ function camUpdate(){const q=S.p[myId]||S.sp[myId],B=S.b,eh=S.p[myId]||!q?0:stH(
  let fv=FOV[m];if(m===3&&cam.aspect<1)fv=Math.min(95,fv/Math.sqrt(Math.max(.5,cam.aspect)));
  if(cam.fov!==fv){cam.fov=fv;cam.updateProjectionMatrix()}const o=D[myId];if(o)o.m.visible=m!==4&&m!==5}
 // ---------- pase de batalla ----------
+const BP_URL='https://script.google.com/macros/s/AKfycbxByx5xgKOYCviMag7rMOfz5sbSYaTZP2h2DS6MUXtW0k5Z_iBeEOMUTnzInTIBA_21/exec';
+async function srv(a,n,v,d){try{const c=new AbortController(),t=setTimeout(()=>c.abort(),12000),r=await fetch(BP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a,n,v,d}),signal:c.signal});clearTimeout(t);return await r.json()}catch(e){return{net:1,err:'Sin conexión'}}}
+let bpTm=0,bpBusy=0;const bpPush=()=>{clearTimeout(bpTm);bpTm=setTimeout(bpSync,4000)};
+async function bpSync(){if(!ACC||!BP||bpBusy)return;bpBusy=1;try{const r=await srv('save',ACC.n,await sha(ACC.k),{xp:BP.xp,cl:BP.cl,eq:BP.eq,vol:BP.vol});
+  if(r.p&&!ACC.adm&&(r.p.xp!==BP.xp||r.p.cl.length!==BP.cl.length)){BP.xp=r.p.xp;BP.cl=r.p.cl.filter(i=>PASS.tiers[i]);BP.eq=r.p.eq;svj(bpKey(),BP);if($('menu').classList.contains('on'))menu()}}catch(e){}bpBusy=0}
+async function bpPull(){if(!ACC)return;const v=await sha(ACC.k);let r=await srv('login',ACC.n,v);if(r.err&&/No existe/.test(r.err))r=await srv('reg',ACC.n,v);
+ if(r.p&&ACC){SRVP=r.p;loadBP();bpPush();if($('menu').classList.contains('on'))menu()}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&BP)bpSync()});
 const AU=new Audio(),RI={skin:'🎨',music:'🎵'};AU.loop=true;let bpM=0,bpT=0;
-const bpLv=()=>BP?Math.min(PASS.tiers.length,Math.floor(BP.xp/PASS.xp)):0,bpKey=()=>'hx3bp|'+ACC.n.toLowerCase(),bpSave=()=>{if(BP&&ACC)svj(bpKey(),BP)};
-function loadBP(){BP=null;if(!ACC)return;const d=ldj(bpKey(),0)||{},e=d.eq||{};BP={xp:+d.xp||0,cl:Array.isArray(d.cl)?d.cl.filter(i=>PASS.tiers[i]):[],eq:{s:e.s==null?-1:e.s,m:e.m==null?-1:e.m},vol:d.vol==null?.5:+d.vol};AU.volume=BP.vol}
+const bpLv=()=>BP?Math.min(PASS.tiers.length,Math.floor(BP.xp/PASS.xp)):0,bpKey=()=>'hx3bp|'+ACC.n.toLowerCase(),bpSave=()=>{if(BP&&ACC){svj(bpKey(),BP);bpPush()}};
+function loadBP(){BP=null;if(!ACC)return;const d=ldj(bpKey(),0)||{},e=d.eq||{},Q=SRVP;let xp=+d.xp||0,cl=Array.isArray(d.cl)?d.cl:[],eq={s:e.s==null?-1:e.s,m:e.m==null?-1:e.m},vol=d.vol==null?.5:+d.vol;
+ if(Q){xp=ACC.adm?Q.xp:Math.max(xp,Q.xp);cl=[...new Set(cl.concat(Q.cl||[]))];if(Q.eq){if(eq.s<0)eq.s=Q.eq.s;if(eq.m<0)eq.m=Q.eq.m}if(d.vol==null)vol=Q.vol}
+ BP={xp,cl:cl.filter(i=>PASS.tiers[i]),eq,vol};AU.volume=BP.vol}
 function bpAdd(n){if(!BP||!n)return;const a=bpLv();BP.xp=Math.max(0,Math.min(PASS.tiers.length*PASS.xp,BP.xp+n));bpSave();toast((n>0?'+':'')+n+' XP');if(bpLv()>a)setTimeout(()=>toast('🎟 ¡Nivel '+bpLv()+' del pase!'),1900);if(tab===5&&$('menu').classList.contains('on'))menu()}
 function bpWatch(t){if(!BP)return;const tm=(ros()[myId]||{}).team;if(S.m!==bpM){const m=S.m;bpM=m;if(tm){if((m===1||m===2)&&m===tm)bpAdd(25);else if(m===3||m===4)bpAdd(m-2===tm?100:30)}}
  if(t-bpT>60000){bpT=t;if(tm&&S.run&&!S.pa)bpAdd(10)}}
@@ -379,7 +395,7 @@ function pPass(pg){if(!BP)pg.append(el('p','Entrá con una cuenta (usuario y con
  pb.style.cssText='flex:1;min-width:120px;height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden';fl2.style.cssText='height:100%;background:#ffd84d;width:'+nx/PASS.xp*100+'%';pb.append(fl2);h.append(el('b','Nivel '+lv+' / '+T.length),pb,el('span',nx+' / '+PASS.xp+' XP'));
  const g=el('div',0,'grid');T.forEach((r,i)=>{const ok=lv>i,got=BP&&BP.cl.includes(i),b=el('button',0,'cam'+(got?' on':''),()=>{if(!BP||!ok||got)return;BP.cl.push(i);bpSave();toast('🎒 '+r.n+' → locker');menu()});b.style.opacity=ok?1:.45;
   b.append(el('b',RI[r.t]||'🎁'),el('span',r.n),el('small',String(i+1)),el('span',got?'✔ En tu locker':ok?'¡Reclamar!':'🔒 Nivel '+(i+1)));g.append(b)});
- pg.append(h,g,el('p','XP: +25 por gol de tu equipo, +100 si ganás el partido, +30 si perdés, +10 por minuto jugando. El progreso se guarda en este navegador, ligado a tu cuenta.','hint'))}
+ pg.append(h,g,el('p','XP: +25 por gol de tu equipo, +100 si ganás el partido, +30 si perdés, +10 por minuto jugando. Tu progreso se guarda en tu cuenta y te sigue en cualquier dispositivo.','hint'))}
 function pLocker(pg){if(!BP)return pg.append(el('p','Entrá con una cuenta para tener tu locker.','hint'));
  const L=BP.cl.map(i=>[i,PASS.tiers[i]]),g=el('div',0,'grid');if(!L.length)pg.append(el('div','Tu locker está vacío: reclamá premios en la pestaña Pase.','emp'));
  for(const[i,r]of L){const sk=r.t==='skin',on=sk?BP.eq.s===i:BP.eq.m===i,b=el('button',0,'cam'+(on?' on':''),()=>sk?eqSkin(i):eqMus(on?-1:i));
