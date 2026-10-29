@@ -343,10 +343,11 @@ function skinCanvas(t,s){const c=document.createElement('canvas');c.width=c.heig
  if(s[2]){g.font='bold 62px system-ui';g.textAlign='center';g.textBaseline='middle';g.lineWidth=8;g.strokeStyle='#000';g.strokeText(s[2],64,68);g.fillStyle='#fff';g.fillText(s[2],64,68)}return c}
 const CR=PR*1.012,CT=1.02,capG=new THREE.SphereGeometry(CR,28,10,0,Math.PI*2,0,CT);
 {const pa=capG.attributes.position,ua=capG.attributes.uv,R2=CR*Math.sin(CT);for(let i=0;i<pa.count;i++)ua.setXY(i,pa.getX(i)/(2*R2)+.5,.5-pa.getZ(i)/(2*R2))}
-function mkCapC(cv){const t=new THREE.CanvasTexture(cv);cv._t=t;return new THREE.Mesh(capG,new THREE.MeshLambertMaterial({map:t,transparent:true}))}
+const fullG=new THREE.SphereGeometry(CR,32,20);{const pa=fullG.attributes.position,ua=fullG.attributes.uv;for(let i=0;i<pa.count;i++)ua.setXY(i,pa.getX(i)/(2*CR)+.5,.5-pa.getZ(i)/(2*CR))}
+function mkCapC(cv,geo){const t=new THREE.CanvasTexture(cv);cv._t=t;return new THREE.Mesh(geo||capG,new THREE.MeshLambertMaterial({map:t,transparent:true}))}
 const mkCap=(t,s)=>mkCapC(skinCanvas(t,s));
-function imgCap(t,i){const cv=document.createElement('canvas');cv.width=cv.height=128;const g=cv.getContext('2d');g.beginPath();g.arc(64,64,64,0,7);g.clip();g.fillStyle=TC[t]||'#888';g.fillRect(0,0,128,128);const m=mkCapC(cv);
- fileUrl(PASS.tiers[i]).then(u=>{if(!u)return;const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{g.drawImage(im,0,0,128,128);cv._t.needsUpdate=true};im.onerror=()=>toast('⚠ No se pudo cargar la imagen: '+(PASS.tiers[i].u||''));im.src=u});return m}
+function imgCap(t,i){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle=TC[t]||'#888';g.fillRect(0,0,256,256);const m=mkCapC(cv,fullG);
+ fileUrl(PASS.tiers[i]).then(u=>{if(!u)return;const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{g.drawImage(im,0,0,256,256);cv._t.needsUpdate=true};im.onerror=()=>toast('⚠ No se pudo cargar la imagen: '+(PASS.tiers[i].u||''));im.src=u});return m}
 // extrapolación estilo HaxBall: el cliente predice N ms hacia adelante
 let EXT=+(localStorage.getItem('hx3e')||0)||0,PING=0;
 function setExt(v){EXT=Math.max(0,Math.min(200,Math.round(v)||0));try{localStorage.setItem('hx3e',EXT)}catch(e){}}
