@@ -306,6 +306,12 @@ for(const s of[-1,1]){wall(2*HW+2*GD+12,6,0,s*(HH+3));for(const t of[-1,1]){wall
  for(let i=1;i<=SNT;i++){const o=SX+i*STP,ix=SX+(i-1)*STP,iz=SZ+(i-1)*STP,h=i*SRH,m=new THREE.MeshLambertMaterial({color:cm[i%2]});
   for(const q of[-1,1]){const a=new THREE.Mesh(new THREE.BoxGeometry(2*o,h,STP),m);a.position.set(0,h/2,q*(iz+STP/2));sc.add(a);
    const e=new THREE.Mesh(new THREE.BoxGeometry(STP,h,2*iz),m);e.position.set(q*(ix+STP/2),h/2,0);sc.add(e)}}}
+{const bm=new THREE.MeshLambertMaterial({color:0x1a2236}),dm=new THREE.MeshLambertMaterial({color:0x070a12}),gl=new THREE.MeshBasicMaterial({color:0x5cc8ff}),SPX=SX+24;
+ for(const s2 of[-1,1]){const g3=new THREE.Group(),pole=new THREE.Mesh(new THREE.CylinderGeometry(4,5,76,10),bm);pole.position.y=38;g3.add(pole);
+  const box=new THREE.Mesh(new THREE.BoxGeometry(30,58,46),bm);box.position.y=104;g3.add(box);
+  for(const[y,r]of[[90,13],[121,6.5]]){const rg2=new THREE.Mesh(new THREE.CylinderGeometry(r+2,r+2,1,20),gl);rg2.rotation.z=Math.PI/2;rg2.position.set(-s2*15.4,y,0);g3.add(rg2);
+   const cn=new THREE.Mesh(new THREE.CylinderGeometry(r,r,2,20),dm);cn.rotation.z=Math.PI/2;cn.position.set(-s2*16,y,0);g3.add(cn)}
+  g3.position.set(s2*SPX,16,0);sc.add(g3)}}
 sc.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false});
 // ---------- espacio ----------
 const sky=new THREE.Group();sc.add(sky);
@@ -418,8 +424,8 @@ function actx(){KAC=KAC||new(window.AudioContext||window.webkitAudioContext)();i
 // playlist como si saliera de los parlantes del estadio (audio 3D + eco + se apaga con la distancia)
 let SPG=0;const SV=new THREE.Vector3(),SU=new THREE.Vector3(),setPos=(p,x,y,z)=>{if(p.positionX){p.positionX.value=x;p.positionY.value=y;p.positionZ.value=z}else p.setPosition(x,y,z)};
 function sp3d(){if(SPG!==0)return;SPG=null;try{const c=actx(),mob=/Mobi|Android/i.test(navigator.userAgent);
- const mk=x=>{const p=c.createPanner();p.panningModel=mob?'equalpower':'HRTF';p.distanceModel='inverse';p.refDistance=380;p.rolloffFactor=1.1;p.maxDistance=8000;setPos(p,x,90,0);return p};
- const a=mk(-HW-80),b=mk(HW+80),lp=c.createBiquadFilter(),dry=c.createGain(),wet=c.createGain(),cv=c.createConvolver(),n=c.sampleRate*1.8|0,ir=c.createBuffer(2,n,c.sampleRate);
+ const mk=x=>{const p=c.createPanner();p.panningModel=mob?'equalpower':'HRTF';p.distanceModel='inverse';p.refDistance=380;p.rolloffFactor=1.1;p.maxDistance=8000;setPos(p,x,120,0);return p};
+ const a=mk(-SX-24),b=mk(SX+24),lp=c.createBiquadFilter(),dry=c.createGain(),wet=c.createGain(),cv=c.createConvolver(),n=c.sampleRate*1.8|0,ir=c.createBuffer(2,n,c.sampleRate);
  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3)}
  cv.buffer=ir;lp.type='lowpass';lp.frequency.value=16000;dry.gain.value=1.5;wet.gain.value=.45;
  lp.connect(dry);lp.connect(cv);cv.connect(wet);dry.connect(c.destination);wet.connect(c.destination);a.connect(lp);b.connect(lp);
@@ -427,7 +433,7 @@ function sp3d(){if(SPG!==0)return;SPG=null;try{const c=actx(),mob=/Mobi|Android/
 function spUpd(){if(!SPG)return;const L=SPG.c.listener,P=cam.position;cam.getWorldDirection(SV);SU.set(0,1,0).applyQuaternion(cam.quaternion);
  if(L.positionX){L.positionX.value=P.x;L.positionY.value=P.y;L.positionZ.value=P.z;L.forwardX.value=SV.x;L.forwardY.value=SV.y;L.forwardZ.value=SV.z;L.upX.value=SU.x;L.upY.value=SU.y;L.upZ.value=SU.z}else{L.setPosition(P.x,P.y,P.z);L.setOrientation(SV.x,SV.y,SV.z,SU.x,SU.y,SU.z)}
  SPG.lp.frequency.value=Math.max(1800,16000-Math.max(0,Math.hypot(P.x,P.y,P.z)-350)*20)}
-function plSync(){if(PON&&AU.paused&&!gBusy&&PA.src){sp3d();if(PA.paused)PA.play().catch(()=>{})}else PA.pause()}
+function plSync(){if(PON&&AU.paused&&!gBusy&&PA.src){sp3d();actx();if(PA.paused)PA.play().catch(()=>{})}else PA.pause()}
 async function plNext(k){if(!PLY.length)return;pI=(pI<0?Math.random()*PLY.length|0:pI+1)%PLY.length;const u=await fileUrl(PLY[pI]);if(!u)return(k|0)<PLY.length?plNext((k|0)+1):0;if(PA._u!==u){PA._u=u;PA.src=u}plVol();plSync()}
 function plStart(){if(PON&&PLY.length&&!PA.src)plNext()}
 function setPon(v){PON=v;sv('hx3po',v?1:0);if(v)plStart();plSync()}
