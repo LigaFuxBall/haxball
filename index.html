@@ -56,7 +56,7 @@ function enter(code){$('lobby').style.display='none';for(const i of['code','top'
 $('bc').onclick=()=>{localStorage.setItem('hx3n',$('nm').value);startHost()};
 $('bj').onclick=()=>{const c=$('cd').value.trim().toLowerCase();if(!c)return err('Poné el código');localStorage.setItem('hx3n',$('nm').value);join(c)};
 function startHost(){const code=Math.random().toString(36).slice(2,7);peer=new Peer('hx3d-'+code);
- peer.on('open',()=>{isHost=true;myId='host';PL.host={id:'host',n:myName(),team:0,admin:1,in:{x:0,y:0,k:0}};begin();enter(code);history.replaceState(0,'','#'+code);
+ peer.on('open',()=>{isHost=true;myId='host';PL.host={id:'host',n:myName(),team:0,admin:1,in:{x:0,y:0,k:0}};begin();setT('host',1,1);enter(code);try{history.replaceState(0,'','#'+code)}catch(e){}
   sys('Sala creada. Pasales el link o el código a tus amigos. Escribí /help');bro()});
  peer.on('connection',c=>{c.on('data',d=>hdata(c,d));c.on('close',()=>drop(c.peer))});
  peer.on('error',e=>{if(e.type==='unavailable-id')startHost();else err('Error: '+e.type)})}
@@ -66,7 +66,7 @@ function join(code){err('Conectando...');peer=new Peer();peer.on('open',id=>{myI
  peer.on('error',e=>err(e.type==='peer-unavailable'?'Sala no encontrada':'Error: '+e.type))}
 function uniq(n,id){let b=n,i=2;while(Object.values(PL).some(p=>p.id!==id&&p.n.toLowerCase()===n.toLowerCase()))n=b+i++;return n}
 function hdata(c,d){const id=c.peer;
- if(d.t==='hi'){PL[id]={id,n:uniq(String(d.n).slice(0,14),id),team:0,admin:0,conn:c,in:{x:0,y:0,k:0}};c.send({t:'wel'});bro();sys(PL[id].n+' entró')}
+ if(d.t==='hi'){PL[id]={id,n:uniq(String(d.n).slice(0,14),id),team:0,admin:0,conn:c,in:{x:0,y:0,k:0}};let r=0,b=0;for(const i in PL){PL[i].team==1&&r++;PL[i].team==2&&b++}setT(id,r<=b?1:2,1);c.send({t:'wel'});bro();sys(PL[id].n+' entró')}
  else if(!PL[id])return;else if(d.t==='in')PL[id].in={x:+d.x||0,y:+d.y||0,k:+d.k||0};
  else if(d.t==='act')act(id,d.a,d.x,d.y);else if(d.t==='chat')chat(id,String(d.m))}
 function cdata(d){if(d.t==='s'){S.b={x:d.b[0],y:d.b[1],vx:d.b[2],vy:d.b[3]};const np={};for(const i in d.p){const q=d.p[i];np[i]={x:q[0],y:q[1],vx:q[2],vy:q[3]}}
@@ -191,9 +191,7 @@ function mk(){const m=new THREE.Mesh(new THREE.SphereGeometry(PR,24,16),new THRE
  const ring=new THREE.Mesh(new THREE.RingGeometry(PR+2,PR+5,28),new THREE.MeshBasicMaterial({color:0xffe14d,side:2}));ring.rotation.x=-Math.PI/2;ring.position.y=-PR+.5;m.add(ring);return{m,ring,sh:shadow(PR),lb:null,tx:'',init:0}}
 const camP=[[0,430,340],[0,230,440],[0,640,70]],BN=['','¡GOL ROJO!','¡GOL AZUL!','🏆 ¡GANA ROJO!','🏆 ¡GANA AZUL!'];
 let last=0,acc=0;
-function frame(t){requestAnimationFrame(frame);const dt=Math.min((t-last)/1000,.1);last=t;acc+=dt;
- while(acc>=1/60){acc-=1/60;tk++;if(isHost){hostStep();if(tk%3==0)send()}else clientStep()}
- const k=isHost?1:.35,B=ball.position,nx=B.x+(S.b.x-B.x)*k,nz=B.z+(S.b.y-B.z)*k;ball.rotation.z-=(nx-B.x)/BR;ball.rotation.x+=(nz-B.z)/BR;B.set(nx,BR,nz);bsh.position.x=nx;bsh.position.z=nz;
+function frame(t){requestAnimationFrame(frame); const k=isHost?1:.35,B=ball.position,nx=B.x+(S.b.x-B.x)*k,nz=B.z+(S.b.y-B.z)*k;ball.rotation.z-=(nx-B.x)/BR;ball.rotation.x+=(nz-B.z)/BR;B.set(nx,BR,nz);bsh.position.x=nx;bsh.position.z=nz;
  const R=ros();
  for(const id in S.p){const q=S.p[id],r=R[id];if(!r)continue;const o=D[id]||(D[id]=(()=>{const d=mk();sc.add(d.m);return d})());
   const P=o.m.position;if(!o.init){P.set(q.x,PR,q.y);o.init=1}P.x+=(q.x-P.x)*k;P.z+=(q.y-P.z)*k;P.y=PR;o.sh.position.x=P.x;o.sh.position.z=P.z;
@@ -204,5 +202,8 @@ function frame(t){requestAnimationFrame(frame);const dt=Math.min((t-last)/1000,.
  const tm=S.lim[1]?String(Math.floor(S.tm/60)).padStart(2,'0')+':'+String(S.tm%60|0).padStart(2,'0'):'∞';
  $('top').innerHTML='<span style="color:#ff6b61">ROJO '+S.s[0]+'</span> &nbsp;'+tm+'&nbsp; <span style="color:#6aa0ff">'+S.s[1]+' AZUL</span><small>'+(S.ot?'TIEMPO EXTRA · gol de oro':'')+'</small>';
  $('msg').textContent=!S.run?(S.s[0]+S.s[1]||S.m?'Partida terminada':'Partida detenida')+' · el admin puede iniciar':S.pa?'⏸ PAUSA':BN[S.m]||((R[myId]&&!R[myId].team)?'Elegí equipo: Esc → Rojo / Azul (o escribí /red o /blue)':'')}
+let lt=performance.now(),ac2=0;
+function simTick(){const n=performance.now();ac2+=Math.min((n-lt)/1000,.25);lt=n;while(ac2>=1/60){ac2-=1/60;tk++;if(isHost){hostStep();if(tk%3==0)send()}else clientStep()}}
+try{const w=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),16)'])));w.onmessage=simTick}catch(e){setInterval(simTick,16)}
 requestAnimationFrame(frame);
 </script></body></html>
