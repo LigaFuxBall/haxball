@@ -158,8 +158,9 @@ function snap(d){AMB.seen=1;const sm=(n,p)=>{if(p){const dx=p.x+(p.ex||0)-n.x,dy
  for(const i in d.v){const q=d.v[i];ns[i]=sm({x:q[0]/10,y:q[1]/10,vx:q[2]/10,vy:q[3]/10,h:q[4]/10,vz:q[5]/10},S.sp[i])}
  S.b=B;S.p=np;S.sp=ns;S.s=d.s;S.m=d.m;S.tm=d.tm;S.run=d.run;S.pa=d.pa;S.ot=d.ot;S.ko=d.ko||0;S.lim=d.lim}
 function cdata(d){if(d.t==='s'){if(d.pv!==3){if(!cdata.w){cdata.w=1;toast('⚠ El anfitrión tiene otra versión: recargá la página (Ctrl+F5)')}return}snap(d)}else if(d.t==='wel'){joined=1;enter(JC);syncEq()}else if(d.t==='no')err(d.m)
- else if(d.t==='ros'){ROSc={};for(const i in d.r)ROSc[i]={id:i,n:d.r[i][0],team:d.r[i][1],admin:d.r[i][2],pw:d.r[i][3],sk:d.r[i][4],im:d.r[i][5],gm:d.r[i][6]};if(d.cf)applyCfg(cfgSan(d.cf,DCFG));warm();menu()}else if(d.t==='goal')playGoal(d);else if(d.t==='msg')show(d);else if(d.t==='pn')PING=Date.now()-d.n}
+ else if(d.t==='ros'){ROSc={};for(const i in d.r)ROSc[i]={id:i,n:d.r[i][0],team:d.r[i][1],admin:d.r[i][2],pw:d.r[i][3],sk:d.r[i][4],im:d.r[i][5],gm:d.r[i][6]};if(d.cf)applyCfg(cfgSan(d.cf,DCFG));warm();menu()}else if(d.t==='goal')playGoal(d);else if(d.t==='menu')openMenu();else if(d.t==='msg')show(d);else if(d.t==='pn')PING=Date.now()-d.n}
 const all=o=>{for(const i in PL)if(PL[i].conn)PL[i].conn.send(o)};
+function openMenu(){try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}tab=0;$('menu').classList.add('on');menu()}
 function say(o,to){if(!isHost)return show(o);if(!to){all(o);show(o)}else if(to==='host')show(o);else PL[to]&&PL[to].conn.send(o)}
 const sys=m=>say({t:'msg',m,c:'#ffd84d'});
 function bro(){const r={};for(const i in PL)r[i]=[PL[i].n,PL[i].team,PL[i].admin,PL[i].pw,PL[i].sk,vt(PL[i].im,'img'),vt(PL[i].gm,'gol')];all({t:'ros',r,cf:CFG});warm();menu()}
@@ -268,7 +269,7 @@ function phys(b,L){const M=p=>p.ef===5?6:p.ef===6?10:p.ef===8?1:2;for(const p of
  for(const q of posts)col(b,q,BR,5,1,1e9,.25);walls(b,BR,true,.5);}
 function hostStep(){specStep();if(!S.run||S.pa)return;
  if(S.pw&&++S.pwt>=3600){givePw();bro();sys('🔄 ¡Los poderes rotaron! Cada uno recibió uno nuevo.')}
- if(S.fr>0&&--S.fr===0){const w=S.m;S.m=0;if(S.over){S.over=0;S.run=0}else resetAll(w===1?2:1)}
+ if(S.fr>0&&--S.fr===0){const w=S.m;S.m=0;if(S.over){S.over=0;S.run=0;S.ko=0;for(const id in PL)if(PL[id].team)setT(id,0,1);bro();sys('🏁 Terminó el partido: todos pasan a espectadores');all({t:'menu'});openMenu();return}else resetAll(w===1?2:1)}
  if(S.lim[1]&&!S.fr&&!S.ot){S.tm-=1/60;if(S.tm<=0){S.tm=0;if(S.s[0]!==S.s[1])end(S.s[0]>S.s[1]?1:2);else S.ot=1}}
  const b=S.b,L=Object.values(S.p),M=p=>p.ef===5?6:p.ef===6?10:p.ef===8?1:2;
  for(const id in S.p){const p=S.p[id];p.in=PL[id]?PL[id].in:{};p.cd=Math.max(0,(p.cd||0)-1);p.fz=Math.max(0,(p.fz||0)-1);if(p.et>0&&--p.et===0)p.ef=0;p.r=p.ef===5?PR*1.8:p.ef===8?PR*.5:PR;
