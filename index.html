@@ -335,21 +335,22 @@ function wall(w,d,x,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,9,d),wm);m
 for(const s of[-1,1]){wall(2*HW+2*GD+12,6,0,s*(HH+3));for(const t of[-1,1]){wall(6,HH-GH,s*(HW+3),t*(GH+HH)/2);wall(GD,6,s*(HW+GD/2),t*(GH+3))}wall(6,2*GH,s*(HW+GD+3),0);
  const net=new THREE.Mesh(new THREE.BoxGeometry(GD,14,2*GH),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.35}));net.position.set(s*(HW+GD/2),7,0);sc.add(net);
  for(const t of[-1,1]){const p=new THREE.Mesh(new THREE.CylinderGeometry(5,5,20,12),PM[s<0?0:1]);p.position.set(s*HW,10,t*GH);sc.add(p)}}
+const NEON=[]; // elementos celestes que reaccionan a la música: {m:material, b:banda (0 graves,1 medios,2 agudos), o:desfase en el degradé}
 {const gm=new THREE.Mesh(new THREE.CircleGeometry(660,64),new THREE.MeshLambertMaterial({color:0x151d2e}));gm.rotation.x=-Math.PI/2;gm.position.y=-.6;sc.add(gm);
- const rim=new THREE.Mesh(new THREE.RingGeometry(652,664,64),new THREE.MeshBasicMaterial({color:0x5cc8ff}));rim.rotation.x=-Math.PI/2;rim.position.y=-.5;sc.add(rim);
+ const rmM=new THREE.MeshBasicMaterial({color:0x5cc8ff});NEON.push({m:rmM,b:0,o:0});const rim=new THREE.Mesh(new THREE.RingGeometry(652,664,64),rmM);rim.rotation.x=-Math.PI/2;rim.position.y=-.5;sc.add(rim);
  const cm=[0x2b3b5c,0x354a74];
  for(let i=1;i<=SNT;i++){const o=SX+i*STP,ix=SX+(i-1)*STP,iz=SZ+(i-1)*STP,h=i*SRH,m=new THREE.MeshLambertMaterial({color:cm[i%2]});
   for(const q of[-1,1]){const a=new THREE.Mesh(new THREE.BoxGeometry(2*o,h,STP),m);a.position.set(0,h/2,q*(iz+STP/2));sc.add(a);
    const e=new THREE.Mesh(new THREE.BoxGeometry(STP,h,2*iz),m);e.position.set(q*(ix+STP/2),h/2,0);sc.add(e)}}}
-{const bm=new THREE.MeshLambertMaterial({color:0x1a2236}),dm=new THREE.MeshLambertMaterial({color:0x070a12}),gl=new THREE.MeshBasicMaterial({color:0x5cc8ff}),SPX=SX+24;
+{const bm=new THREE.MeshLambertMaterial({color:0x1a2236}),dm=new THREE.MeshLambertMaterial({color:0x070a12}),glM=(b,o)=>{const m=new THREE.MeshBasicMaterial({color:0x5cc8ff});NEON.push({m,b,o});return m},SPX=SX+24;
  for(const s2 of[-1,1]){const g3=new THREE.Group(),pole=new THREE.Mesh(new THREE.CylinderGeometry(4,5,76,10),bm);pole.position.y=38;g3.add(pole);
   const box=new THREE.Mesh(new THREE.BoxGeometry(30,58,46),bm);box.position.y=104;g3.add(box);
-  for(const[y,r]of[[90,13],[121,6.5]]){const rg2=new THREE.Mesh(new THREE.CylinderGeometry(r+2,r+2,1,20),gl);rg2.rotation.z=Math.PI/2;rg2.position.set(-s2*15.4,y,0);g3.add(rg2);
+  for(const[y,r]of[[90,13],[121,6.5]]){const rg2=new THREE.Mesh(new THREE.CylinderGeometry(r+2,r+2,1,20),glM(r>10?0:2,(s2<0?0:.5)+(r>10?0:.25)));rg2.rotation.z=Math.PI/2;rg2.position.set(-s2*15.4,y,0);g3.add(rg2);
    const cn=new THREE.Mesh(new THREE.CylinderGeometry(r,r,2,20),dm);cn.rotation.z=Math.PI/2;cn.position.set(-s2*16,y,0);g3.add(cn)}
   g3.position.set(s2*SPX,16,0);sc.add(g3)}}
 sc.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false});
 // ---------- espacio ----------
-const sky=new THREE.Group();sc.add(sky);let PLN=null,PL2=null,RDT=null;
+const sky=new THREE.Group();sc.add(sky);let PLN=null,PL2=null,RDT=null,RGC=null;
 {const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');x.fillStyle='#02030a';x.fillRect(0,0,1024,512);
  [[210,150,190,'110,70,220'],[560,330,230,'30,120,210'],[790,130,190,'200,60,160'],[380,440,170,'70,50,170']].forEach(a=>{const gr=x.createRadialGradient(a[0],a[1],0,a[0],a[1],a[2]);gr.addColorStop(0,'rgba('+a[3]+',.38)');gr.addColorStop(1,'rgba('+a[3]+',0)');x.fillStyle=gr;x.fillRect(0,0,1024,512)});
  const d=new THREE.Mesh(new THREE.SphereGeometry(1500,24,16),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.BackSide,fog:false,depthWrite:false}));d.renderOrder=-10;d.frustumCulled=false;sky.add(d)}
@@ -389,7 +390,7 @@ for(const[n,sz]of[[1400,2.2],[220,3.6]]){const P=new Float32Array(n*3),C=new Flo
   for(let a=0;a<=6.2832;a+=.4)pts.push(B.clone().addScaledVector(rt,R*Math.sin(a)).addScaledVector(up,R-R*Math.cos(a)).addScaledVector(out,a*22))}
  for(const a of[[283,2,1320],[304,26,1059],[339,13,1198]])pts.push(sph(a[0],a[1],a[2]));
  const cu=new THREE.CatmullRomCurve3(pts,true,'catmullrom',.5);cu.arcLengthDivisions=3000;
- const GS=[[0,[.1,.85,1]],[.33,[.45,.4,1]],[.66,[1,.35,.85]],[1,[.1,.85,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[0][1]};
+ const GS=[[0,[.1,.85,1]],[.33,[.45,.4,1]],[.66,[1,.35,.85]],[1,[.1,.85,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[0][1]};RGC=gc;
  const N=1800,C=5,HW2=55,len=cu.getLength(),rep=Math.max(1,Math.round(len/110)),PO=new Float32Array((N+1)*C*3),UV=new Float32Array((N+1)*C*2),CO=new Float32Array((N+1)*C*3),IX=[];
  for(let i=0;i<=N;i++){const s=i/N,pos=cu.getPointAt(s%1),T=cu.getTangentAt(s%1),V=pos.clone().negate().normalize(),w=new THREE.Vector3().crossVectors(T,V).normalize(),th=.95*Math.sin(s*6.2832*16),n2=new THREE.Vector3().crossVectors(T,w);
   w.multiplyScalar(Math.cos(th)).addScaledVector(n2,Math.sin(th));const col=gc(s);
@@ -563,7 +564,20 @@ function sp3d(){if(SPG!==0)return;SPG=null;try{const c=actx(),mob=/Mobi|Android/
  cv.buffer=ir;lp.type='lowpass';lp.frequency.value=16000;dry.gain.value=1.5;wet.gain.value=.45;
  lp.connect(dry);lp.connect(cv);cv.connect(wet);dry.connect(c.destination);wet.connect(c.destination);a.connect(lp);b.connect(lp);
  SPG={c,lp,a,b};spHook(PA)}catch(e){SPG=null}}
-function spHook(el){if(!SPG||el._h)return;el._h=1;const s=SPG.c.createMediaElementSource(el),g=SPG.c.createGain(),v=want(el);g.gain.value=v;el._lv=v;s.connect(g);g.connect(SPG.a);g.connect(SPG.b);el._g=g;el.volume=1}
+function spHook(el){if(!SPG||el._h)return;el._h=1;const s=SPG.c.createMediaElementSource(el),g=SPG.c.createGain(),v=want(el);g.gain.value=v;el._lv=v;s.connect(g);g.connect(SPG.a);g.connect(SPG.b);el._g=g;el.volume=1;if(el===PA)anTap(s)}
+// ---- círculos celestes que bailan con la playlist, pintados con el degradé de la ruta espacial ----
+let AN=null,ANB=null;const NB=[0,0,0],NM=[.3,.3,.3],NC=new THREE.Color(0x5cc8ff);let NP=0,NA=0,NK=0,NAv=0,NT=0,NLB=0;
+function anTap(s){try{const c=SPG.c,an=c.createAnalyser(),z=c.createGain();an.fftSize=512;an.smoothingTimeConstant=.5;z.gain.value=0;s.connect(an);an.connect(z);z.connect(c.destination);AN=an;ANB=new Uint8Array(an.frequencyBinCount)}catch(e){AN=null}}
+function neonTick(){if(!NEON.length||!RGC)return;const n=performance.now(),dt=Math.min(.1,(n-NT)/1000||.016);NT=n;
+ const live=!!(AN&&PON&&AU.paused&&PA.src&&!PA.paused),act=live?Math.min(1,PF.v*1.3):0;
+ if(!live&&NA<.002){if(NA>0){NA=0;for(const e of NEON)e.m.color.copy(NC)}return}
+ const x=[0,0,0];if(live){AN.getByteFrequencyData(ANB);[[1,5],[5,24],[24,90]].forEach((r,j)=>{let t=0;for(let i=r[0];i<r[1];i++)t+=ANB[i];x[j]=t/(r[1]-r[0])/255})}
+ for(let j=0;j<3;j++){NM[j]=Math.max(NM[j]*(1-dt*.05),x[j],.12);const v=live?Math.min(1,x[j]/NM[j]):0,k=1-Math.exp(-dt*(v>NB[j]?32:7));NB[j]+=(v-NB[j])*k}
+ // golpe de graves: salta el color por el degradé y destella
+ NAv+=(x[0]-NAv)*(1-Math.exp(-dt*3));if(live&&x[0]>NAv*1.22+.04&&n-NLB>170){NLB=n;NK=1;NP=(NP+.07)%1}
+ NK*=Math.exp(-dt*6);NP=(NP+dt*(.02+.2*NB[1]))%1;NA+=(act-NA)*(1-Math.exp(-dt*3));
+ for(const e of NEON){const c=RGC((NP+e.o)%1),l=Math.min(1,NB[e.b]+(e.b===0?.5*NK:0)),br=.5+.5*l,w=e.b===0?.3*NK:0;
+  const r=Math.min(1,c[0]*br+w),g=Math.min(1,c[1]*br+w),b=Math.min(1,c[2]*br+w);e.m.color.setRGB(NC.r+(r-NC.r)*NA,NC.g+(g-NC.g)*NA,NC.b+(b-NC.b)*NA)}}
 let spF=0;function spUpd(){if(!SPG||(++spF&3))return;const L=SPG.c.listener,P=cam.position;cam.getWorldDirection(SV);SU.set(0,1,0).applyQuaternion(cam.quaternion);
  if(L.positionX){L.positionX.value=P.x;L.positionY.value=P.y;L.positionZ.value=P.z;L.forwardX.value=SV.x;L.forwardY.value=SV.y;L.forwardZ.value=SV.z;L.upX.value=SU.x;L.upY.value=SU.y;L.upZ.value=SU.z}else{L.setPosition(P.x,P.y,P.z);L.setOrientation(SV.x,SV.y,SV.z,SU.x,SU.y,SU.z)}
  SPG.lp.frequency.value=Math.max(1800,16000-Math.max(0,Math.hypot(P.x,P.y,P.z)-350)*20)}
@@ -729,7 +743,7 @@ function frame0(t,rp){perfTick(t);if(!rp)bpWatch(t);const n=rp||isHost||!S.run||
    if(o.fa==null)o.fa=tg==null?0:tg;else if(tg!=null){let dd=tg-o.fa;dd-=6.2832*Math.round(dd/6.2832);o.fa+=dd*.3}if(o.cap)o.cap.rotation.y=o.fa}
   const nm=(r.admin?'★ ':'')+r.n;if(nm!==o.tx){if(o.lb){o.m.remove(o.lb);o.lb.material.map.dispose();o.lb.material.dispose()}o.lb=label(nm);o.m.add(o.lb);o.tx=nm}}
  for(const id in D)if((!S.p[id]&&!S.sp[id])||!R[id])rmP(id);
- camUpdate();spUpd();R3.render(sc,cam);
+ camUpdate();spUpd();neonTick();R3.render(sc,cam);
  const tm=S.lim[1]?String(Math.floor(S.tm/60)).padStart(2,'0')+':'+String(S.tm%60|0).padStart(2,'0'):'∞';
  stx('top',eTop,'<span style="color:'+TLC[1]+'">'+TN[1].toUpperCase()+' '+S.s[0]+'</span> &nbsp;'+tm+'&nbsp; <span style="color:'+TLC[2]+'">'+S.s[1]+' '+TN[2].toUpperCase()+'</span><small>'+(S.ot?'TIEMPO EXTRA · gol de oro':'')+(S.ko&&S.run?(S.ot?' · ':'')+'SAQUE '+TN[S.ko].toUpperCase():'')+'</small>',1);
  {const rr=R[myId],kk=rr?rr.pw:-1,w=ePw,q0=S.p[myId];w.hidden=!(kk>=0);if(kk>=0)stx('pw',w,PWR[kk][0]+' '+PWR[kk][1]+' · ['+kn(KB.power[0])+'] '+((q0&&q0.cd)?q0.cd+'s':'¡listo!'))}
