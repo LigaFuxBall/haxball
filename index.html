@@ -382,21 +382,24 @@ for(const[n,sz]of[[1400,2.2],[220,3.6]]){const P=new Float32Array(n*3),C=new Flo
  const rc=document.createElement('canvas');rc.width=rc.height=128;const r2=rc.getContext('2d');r2.fillStyle='rgb(26,36,84)';r2.fillRect(0,0,128,128);
  r2.fillStyle='#fff';r2.fillRect(0,0,9,128);r2.fillRect(119,0,9,128);r2.fillStyle='rgb(120,140,255)';r2.fillRect(34,0,2,128);r2.fillRect(92,0,2,128);r2.fillStyle='rgb(200,215,255)';r2.fillRect(62,0,4,64);r2.fillStyle='rgb(90,110,210)';r2.fillRect(0,0,128,3);
  const rt=new THREE.CanvasTexture(rc);rt.wrapS=rt.wrapT=THREE.RepeatWrapping;rt.anisotropy=8;RDT=rt;
- const pts=[[-1050,-170,-260],[-850,-100,-200],[-660,-30,-130],[-520,30,-70]];
- for(let a=0;a<=6.2832;a+=.4)pts.push([-380+170*Math.sin(a),200-170*Math.cos(a),-60+a*26]);
- pts.push([-250,60,160],[-110,60,240],[10,50,330],[120,30,420],[220,10,520]);
- const cu=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],p[1],DL+p[2])),false,'catmullrom',.5);cu.arcLengthDivisions=900;
- const GS=[[0,[.1,.85,1]],[.35,[.45,.4,1]],[.7,[1,.35,.85]],[1,[.4,.5,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[3][1]};
- const N=700,C=5,HW2=48,len=cu.getLength(),PO=new Float32Array((N+1)*C*3),UV=new Float32Array((N+1)*C*2),CO=new Float32Array((N+1)*C*3),IX=[];
- for(let i=0;i<=N;i++){const s=i/N,pos=cu.getPointAt(s),T=cu.getTangentAt(s),V=pos.clone().negate().normalize(),w=new THREE.Vector3().crossVectors(T,V).normalize(),th=.95*Math.sin(s*14),n2=new THREE.Vector3().crossVectors(T,w);
-  w.multiplyScalar(Math.cos(th)).addScaledVector(n2,Math.sin(th));const fd=Math.min(1,s/.12),f=fd*fd*(3-2*fd)*.95,col=gc(s);
-  for(let j=0;j<C;j++){const o=i*C+j,k=(j/(C-1)-.5)*2*HW2;PO[o*3]=pos.x+w.x*k;PO[o*3+1]=pos.y+w.y*k;PO[o*3+2]=pos.z+w.z*k;UV[o*2]=j/(C-1);UV[o*2+1]=s*len/110;CO[o*3]=col[0]*f;CO[o*3+1]=col[1]*f;CO[o*3+2]=col[2]*f}
+ // ruta: un anillo gigante de luz que rodea todo el cielo y pasa por delante o por detrás de cada planeta
+ const sph=(az,el,d)=>{az*=Math.PI/180;el*=Math.PI/180;return new THREE.Vector3(d*Math.cos(el)*Math.cos(az),d*Math.sin(el),d*Math.cos(el)*Math.sin(az))};
+ const pts=[[36,8,1000],[75,20,1200],[118,24,1330],[160,8,1150],[200,22,1100],[227,14,1050]].map(a=>sph(a[0],a[1],a[2]));
+ {const B=sph(246,4,1200),az=246*Math.PI/180,rt=new THREE.Vector3(-Math.sin(az),0,Math.cos(az)),out=new THREE.Vector3(Math.cos(az),0,Math.sin(az)),up=new THREE.Vector3(0,1,0),R=160;
+  for(let a=0;a<=6.2832;a+=.4)pts.push(B.clone().addScaledVector(rt,R*Math.sin(a)).addScaledVector(up,R-R*Math.cos(a)).addScaledVector(out,a*22))}
+ for(const a of[[283,2,1320],[306,21,1100],[340,12,1200]])pts.push(sph(a[0],a[1],a[2]));
+ const cu=new THREE.CatmullRomCurve3(pts,true,'catmullrom',.5);cu.arcLengthDivisions=3000;
+ const GS=[[0,[.1,.85,1]],[.33,[.45,.4,1]],[.66,[1,.35,.85]],[1,[.1,.85,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[0][1]};
+ const N=1800,C=5,HW2=55,len=cu.getLength(),rep=Math.max(1,Math.round(len/110)),PO=new Float32Array((N+1)*C*3),UV=new Float32Array((N+1)*C*2),CO=new Float32Array((N+1)*C*3),IX=[];
+ for(let i=0;i<=N;i++){const s=i/N,pos=cu.getPointAt(s%1),T=cu.getTangentAt(s%1),V=pos.clone().negate().normalize(),w=new THREE.Vector3().crossVectors(T,V).normalize(),th=.95*Math.sin(s*6.2832*16),n2=new THREE.Vector3().crossVectors(T,w);
+  w.multiplyScalar(Math.cos(th)).addScaledVector(n2,Math.sin(th));const col=gc(s);
+  for(let j=0;j<C;j++){const o=i*C+j,k=(j/(C-1)-.5)*2*HW2;PO[o*3]=pos.x+w.x*k;PO[o*3+1]=pos.y+w.y*k;PO[o*3+2]=pos.z+w.z*k;UV[o*2]=j/(C-1);UV[o*2+1]=s*rep;CO[o*3]=col[0]*.95;CO[o*3+1]=col[1]*.95;CO[o*3+2]=col[2]*.95}
   if(i<N)for(let j=0;j<C-1;j++){const a=i*C+j,b=a+1,c=a+C,d=c+1;IX.push(a,c,b,b,c,d)}}
  const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(PO,3));rg.setAttribute('uv',new THREE.BufferAttribute(UV,2));rg.setAttribute('color',new THREE.BufferAttribute(CO,3));rg.setIndex(IX);
- const road=new THREE.Mesh(rg,new THREE.MeshBasicMaterial({map:rt,vertexColors:true,transparent:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));road.frustumCulled=false;grp.add(road);
+ const road=new THREE.Mesh(rg,new THREE.MeshBasicMaterial({map:rt,vertexColors:true,transparent:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));road.frustumCulled=false;sky.add(road);
  // arcos de luz sobre la ruta
- const tg=new THREE.TorusGeometry(80,3.5,10,44);for(const s of[.1,.17,.55,.64,.73,.82]){const col=gc(s),m=new THREE.Mesh(tg,new THREE.MeshBasicMaterial({color:new THREE.Color(col[0],col[1],col[2]),transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));
-  m.position.copy(cu.getPointAt(s));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),cu.getTangentAt(s));grp.add(m)}}
+ const tg=new THREE.TorusGeometry(85,3.5,10,44);for(let k=0;k<18;k++){const s=(k+.5)/18,col=gc(s),m=new THREE.Mesh(tg,new THREE.MeshBasicMaterial({color:new THREE.Color(col[0],col[1],col[2]),transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));
+  m.position.copy(cu.getPointAt(s));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),cu.getTangentAt(s));m.frustumCulled=false;sky.add(m)}}
 const bc=document.createElement('canvas');bc.width=512;bc.height=256;const bg=bc.getContext('2d');bg.scale(4,4);bg.fillStyle='#ffd21f';bg.fillRect(0,0,128,64);bg.fillStyle='#c98f00';
 [[10,12],[40,40],[70,14],[100,44],[120,18],[25,58],[85,60]].forEach(a=>{bg.beginPath();bg.arc(a[0],a[1],9,0,7);bg.fill()});
 // pelota 2: amarilla lisa con UNA sola cara sonriente negra
