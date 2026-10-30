@@ -156,7 +156,7 @@ async function vet(n,k){const nl=n.toLowerCase(),H=/^[0-9a-f]{64}$/;
  if(!REG[nl]){REG[nl]=v;svj('hx3reg',REG);return{ok:1,acc:1}}return REG[nl]===v?{ok:1,acc:1}:{no:'Contraseña incorrecta para esa cuenta.'}}
 async function hello(c,d){const id=c.peer;if(PL[id])return;const n=String(d.n||'').trim().slice(0,14)||'Jugador';let r;try{r=await vet(n,d.k)}catch(e){r={no:'Error verificando la cuenta'}}
  if(r.no){c.send({t:'no',m:r.no});setTimeout(()=>c.close(),400);return}
- PL[id]={id,n:uniq(n,id),team:0,admin:r.adm?1:0,acc:r.acc,sk:sksan(d.sk),im:ni(d.im),gm:ni(d.gm),pw:S.pw?Math.floor(Math.random()*PWR.length):-1,conn:c,in:{x:0,y:0,k:0}};let a=0,b=0;for(const i in PL){PL[i].team==1&&a++;PL[i].team==2&&b++}setT(id,a<=b?1:2,1);c.send({t:'wel'});bro();pwMsg(id);sys(PL[id].n+' entró')}
+ PL[id]={id,n:uniq(n,id),team:0,admin:r.adm?1:0,acc:r.acc,sk:sksan(d.sk),im:ni(d.im),gm:ni(d.gm),pw:S.pw?Math.floor(Math.random()*PWR.length):-1,conn:c,in:{x:0,y:0,k:0}};let a=0,b=0;for(const i in PL){PL[i].team==1&&a++;PL[i].team==2&&b++}setT(id,a<=b?1:2,1);c.send({t:'wel'});bro();setTimeout(plBeat,200);pwMsg(id);sys(PL[id].n+' entró')}
 function hdata(c,d){const id=c.peer;
  if(d.t==='hi')hello(c,d);
  else if(!PL[id])return;else if(d.t==='in')PL[id].in={x:+d.x||0,y:+d.y||0,k:+d.k||0,p:+d.p||0,j:+d.j||0};
@@ -167,7 +167,7 @@ function snap(d){AMB.seen=1;const sm=(n,p)=>{if(p){const dx=p.x+(p.ex||0)-n.x,dy
  for(const i in d.v){const q=d.v[i];ns[i]=sm({x:q[0]/10,y:q[1]/10,vx:q[2]/10,vy:q[3]/10,h:q[4]/10,vz:q[5]/10},S.sp[i])}
  S.b=B;S.p=np;S.sp=ns;S.s=d.s;S.m=d.m;S.tm=d.tm;S.run=d.run;S.pa=d.pa;S.ot=d.ot;S.ko=d.ko||0;S.lim=d.lim}
 function cdata(d){if(d.t==='s'){if(d.pv!==4){if(!cdata.w){cdata.w=1;toast('⚠ El anfitrión tiene otra versión: recargá la página (Ctrl+F5)')}return}snap(d)}else if(d.t==='wel'){joined=1;enter(JC);syncEq()}else if(d.t==='no')err(d.m)
- else if(d.t==='ros'){ROSc={};for(const i in d.r)ROSc[i]={id:i,n:d.r[i][0],team:d.r[i][1],admin:d.r[i][2],pw:d.r[i][3],sk:d.r[i][4],im:d.r[i][5],gm:d.r[i][6]};if(d.cf)applyCfg(cfgSan(d.cf,DCFG));warm();menu()}else if(d.t==='goal')playGoal(d);else if(d.t==='menu')openMenu();else if(d.t==='msg')show(d);else if(d.t==='pn')PING=Date.now()-d.n}
+ else if(d.t==='ros'){ROSc={};for(const i in d.r)ROSc[i]={id:i,n:d.r[i][0],team:d.r[i][1],admin:d.r[i][2],pw:d.r[i][3],sk:d.r[i][4],im:d.r[i][5],gm:d.r[i][6]};if(d.cf)applyCfg(cfgSan(d.cf,DCFG));warm();menu()}else if(d.t==='goal')playGoal(d);else if(d.t==='menu')openMenu();else if(d.t==='msg')show(d);else if(d.t==='pn')PING=Date.now()-d.n;else if(d.t==='pl')plRecv(d)}
 const all=o=>{for(const i in PL)if(PL[i].conn)PL[i].conn.send(o)};
 function openMenu(){try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}tab=0;$('menu').classList.add('on');menu()}
 function say(o,to){if(!isHost)return show(o);if(!to){all(o);show(o)}else if(to==='host')show(o);else PL[to]&&PL[to].conn.send(o)}
@@ -202,7 +202,7 @@ function act(f,a,x,y){const p=PL[f];if(!p)return;const W=t=>say({t:'msg',m:t,c:'
  else if(a==='start'||a==='reset'){begin();sys('¡Arranca la partida!')}
  else if(a==='pw'){if(x==='off'){S.pw=0;for(const i in PL)PL[i].pw=-1;bro();sys('Poderes desactivados')}else{S.pw=1;givePw();bro();sys('¡Poderes activados! Rotan cada 1 minuto.')}}
  else if(a==='cfg'){const o=Object.assign({},CFG,x&&typeof x==='object'?x:{}),ob=CFG.b;CFG=cfgSan(o,DCFG);svj('hx3cfg',CFG);applyCfg(CFG);bro();sys(CFG.b!==ob?'Pelota: '+(CFG.b?'sonriente 🙂':'clásica'):'Equipos: '+CFG.n[0]+' vs '+CFG.n[1])}
- else if(a==='stop'){S.run=0;sys('Partida detenida')}else if(a==='pause'){S.pa^=1;if(!S.pa)sys('▶ Se reanuda');bro()}else if(a==='resume'){if(S.pa){S.pa=0;sys('▶ Se reanuda');bro()}else W('El partido no está en pausa')}
+ else if(a==='plnext'){plNext();sys('⏭ Siguiente tema de la playlist')}else if(a==='stop'){S.run=0;sys('Partida detenida')}else if(a==='pause'){S.pa^=1;if(!S.pa)sys('▶ Se reanuda');bro()}else if(a==='resume'){if(S.pa){S.pa=0;sys('▶ Se reanuda');bro()}else W('El partido no está en pausa')}
  else if(a==='shuffle'){const ids=Object.keys(PL).sort(()=>Math.random()-.5);ids.forEach((i,k)=>setT(i,k%2+1,1));bro();sys('Equipos mezclados')}
  else if(a==='swap'){for(const i in PL)if(PL[i].team)setT(i,3-PL[i].team,1);bro();sys('Equipos intercambiados')}
  else if(a==='clear'){for(const i in PL)setT(i,0,1);bro();sys('Todos a espectadores')}
@@ -384,10 +384,10 @@ for(const[n,sz]of[[1400,2.2],[220,3.6]]){const P=new Float32Array(n*3),C=new Flo
  const rt=new THREE.CanvasTexture(rc);rt.wrapS=rt.wrapT=THREE.RepeatWrapping;rt.anisotropy=8;RDT=rt;
  // ruta: un anillo gigante de luz que rodea todo el cielo y pasa por delante o por detrás de cada planeta
  const sph=(az,el,d)=>{az*=Math.PI/180;el*=Math.PI/180;return new THREE.Vector3(d*Math.cos(el)*Math.cos(az),d*Math.sin(el),d*Math.cos(el)*Math.sin(az))};
- const pts=[[36,8,1000],[75,20,1200],[118,24,1330],[160,8,1150],[200,22,1100],[227,14,1050]].map(a=>sph(a[0],a[1],a[2]));
- {const B=sph(246,4,1200),az=246*Math.PI/180,rt=new THREE.Vector3(-Math.sin(az),0,Math.cos(az)),out=new THREE.Vector3(Math.cos(az),0,Math.sin(az)),up=new THREE.Vector3(0,1,0),R=160;
+ const pts=[[42,25,929],[73,20,1213],[121,42,1367],[163,12,1160],[198,21,1090],[227,4,964]].map(a=>sph(a[0],a[1],a[2]));
+ {const B=sph(255,5,1213),az=255*Math.PI/180,rt=new THREE.Vector3(-Math.sin(az),0,Math.cos(az)),out=new THREE.Vector3(Math.cos(az),0,Math.sin(az)),up=new THREE.Vector3(0,1,0),R=155;
   for(let a=0;a<=6.2832;a+=.4)pts.push(B.clone().addScaledVector(rt,R*Math.sin(a)).addScaledVector(up,R-R*Math.cos(a)).addScaledVector(out,a*22))}
- for(const a of[[283,2,1320],[306,21,1100],[340,12,1200]])pts.push(sph(a[0],a[1],a[2]));
+ for(const a of[[283,2,1320],[304,26,1059],[339,13,1198]])pts.push(sph(a[0],a[1],a[2]));
  const cu=new THREE.CatmullRomCurve3(pts,true,'catmullrom',.5);cu.arcLengthDivisions=3000;
  const GS=[[0,[.1,.85,1]],[.33,[.45,.4,1]],[.66,[1,.35,.85]],[1,[.1,.85,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[0][1]};
  const N=1800,C=5,HW2=55,len=cu.getLength(),rep=Math.max(1,Math.round(len/110)),PO=new Float32Array((N+1)*C*3),UV=new Float32Array((N+1)*C*2),CO=new Float32Array((N+1)*C*3),IX=[];
@@ -568,15 +568,27 @@ let spF=0;function spUpd(){if(!SPG||(++spF&3))return;const L=SPG.c.listener,P=ca
  if(L.positionX){L.positionX.value=P.x;L.positionY.value=P.y;L.positionZ.value=P.z;L.forwardX.value=SV.x;L.forwardY.value=SV.y;L.forwardZ.value=SV.z;L.upX.value=SU.x;L.upY.value=SU.y;L.upZ.value=SU.z}else{L.setPosition(P.x,P.y,P.z);L.setOrientation(SV.x,SV.y,SV.z,SU.x,SU.y,SU.z)}
  SPG.lp.frequency.value=Math.max(1800,16000-Math.max(0,Math.hypot(P.x,P.y,P.z)-350)*20)}
 function plIn(ms){if(PON&&AU.paused&&PA.src){sp3d();actx();if(PA.paused)PA.play().catch(()=>{});if(PF.t!==1)fTo(PF,1,ms||1400)}}
-function plDuck(ms){if(PF.t!==0)fTo(PF,0,ms,()=>{if(gBusy&&!gEnd)PA.pause()})}
-function plSync(){const on=PON&&AU.paused&&PA.src;if(on&&(!gBusy||PF.t===1))plIn();else if(!on){PF.v=PF.t=0;PF.cb=null;PA.pause();audApply()}}
+function plDuck(ms){if(PF.t!==0)fTo(PF,0,ms)} // baja el volumen pero el tema sigue corriendo (así la playlist no se desfasa entre jugadores)
+function plSync(){const on=PON&&AU.paused&&PA.src;if(on&&(!gBusy||PF.t===1))plIn();else if(!on){PF.v=PF.t=0;PF.cb=null;if(isHost&&PA.src){if(PA.paused)PA.play().catch(()=>{})}else PA.pause();audApply()}}
 // orden aleatorio sin repetir: se sortean todos los temas y recién cuando suenan todos se vuelve a mezclar (nunca repite el último seguido)
 let PQ=[];function plPick(){PQ=PQ.filter(i=>i<PLY.length);if(!PQ.length){PQ=PLY.map((_,i)=>i);for(let i=PQ.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[PQ[i],PQ[j]]=[PQ[j],PQ[i]]}
  if(PQ.length>1&&PQ[0]===pI){const j=1+(Math.random()*(PQ.length-1)|0);[PQ[0],PQ[j]]=[PQ[j],PQ[0]]}}pI=PQ.shift()}
-async function plNext(k){if(!PLY.length)return;plPick();const u=await fileUrl(PLY[pI]);if(!u)return(k|0)<PLY.length?plNext((k|0)+1):0;if(PA._u!==u){PA._u=u;PA.src=u}plVol();plSync()}
-function plStart(){if(PON&&PLY.length&&!PA.src)plNext()}
+// ---- playlist sincronizada: el anfitrión elige el tema y la posición, el resto lo sigue (suena igual para todos) ----
+const plKey=r=>r?(r.f||r.u||r.n||''):'',isCli=()=>!isHost&&!!joined&&!!conn&&conn.open;
+let PSY=null; // último estado recibido del anfitrión: {k:tema, p:segundo, pl:1 si sonaba, at:momento local}
+function plBeat(){if(!isHost||!PA._k||!PA.src)return;all({t:'pl',k:PA._k,p:+PA.currentTime.toFixed(2),pl:PA.paused?0:1})}
+function plSeek(force){const s=PSY;if(!s||PA._k!==s.k||PA.readyState<1)return;let tp=s.p+(s.pl?(performance.now()-s.at)/1000:0);
+ if(isFinite(PA.duration))tp=Math.max(0,Math.min(tp,PA.duration-.3));if(force||Math.abs(PA.currentTime-tp)>.9)try{PA.currentTime=tp}catch(e){}}
+async function plFollow(force){const s=PSY;if(!s||!isCli()||!PON||!AU.paused)return;const i=PLY.findIndex(r=>plKey(r)===s.k);if(i<0)return;
+ if(PA._k!==s.k){const u=await fileUrl(PLY[i]);if(!u)return;if(PSY!==s)return plFollow(force);if(PA._k===s.k)return;
+  pI=i;PA._k=s.k;if(PA._u!==u){PA._u=u;PA.src=u}else plSeek(1);plVol();plSync();return}
+ pI=i;if(PA.ended||force)plSeek(1);else if(!PA.paused)plSeek(0);plVol();plSync()}
+function plRecv(d){if(typeof d.k!=='string'||!d.k)return;PSY={k:d.k,p:+d.p||0,pl:d.pl?1:0,at:performance.now()-(+PING||0)/2};plFollow(0)}
+async function plNext(k){if(!PLY.length||isCli())return;plPick();const r=PLY[pI],u=await fileUrl(r);if(!u)return(k|0)<PLY.length?plNext((k|0)+1):0;PA._k=plKey(r);if(PA._u!==u){PA._u=u;PA.src=u}plVol();plSync();plBeat()}
+function plStart(){if(!PLY.length||!(PON||isHost))return;if(isCli()){if(PSY)plFollow(PA.paused?1:0);return}if(!PA.src)plNext()}
 function setPon(v){PON=v;sv('hx3po',v?1:0);if(v)plStart();plSync()}
 PA.onended=()=>plNext();AU.addEventListener('play',plSync);AU.addEventListener('pause',plSync);
+PA.addEventListener('loadedmetadata',()=>{if(isCli())plSeek(1)});PA.addEventListener('playing',plBeat);setInterval(plBeat,2500);
 const plKick=()=>{plStart();plSync()};addEventListener('pointerdown',plKick);addEventListener('keydown',plKick);
 // música de gol (cola, corta a los 8 s con fade)
 function goalFx(t){const id=S.lt,p=PL[id];S.lt=null;if(!p)return;if(p.team!==t){sys('😅 Autogol de '+p.n);return}
@@ -600,7 +612,7 @@ function setClean(v){CLEAN=v;document.body.classList.toggle('clean',v);sv('hx3cl
 function pUI(pg){const b=el('button',CLEAN?'🙈 Interfaz limpia: SÍ':'👁 Interfaz limpia: NO',CLEAN?'key on':'key',()=>{setClean(!CLEAN);menu()});b.style.minWidth='220px';
  pg.append(b,el('p','Oculta el panel de FPS / sala / copiar link y todos los avisos emergentes (XP del pase, música de gol, etc.). El marcador y el chat siguen visibles. Para volver a ver el código de la sala, desactivala.','hint'))}
 function pSound(pg){const sl=(lab,get,set)=>{const r=el('div',0,'bar'),i=el('input'),t=el('span',lab+': '+Math.round(get()*100)+'%');i.type='range';i.min=0;i.max=100;i.value=get()*100;i.style.width='170px';i.oninput=()=>{set(i.value/100);t.textContent=lab+': '+i.value+'%'};r.append(t,i);return r};
- const pb=el('div',0,'bar');pb.append(el('b','🎶 Playlist'),el('button',PON?'🔊 Sonando (apagar)':'🔇 Apagada (encender)',0,()=>{setPon(!PON);menu()}),el('button','⏭ Siguiente',0,()=>{plNext()}),el('span',PLY.length?PLY.length+' temas · ahora: '+(PLY[pI]?PLY[pI].n:'—'):'Sin temas: agregalos en la hoja (tipo playlist)'));
+ const pb=el('div',0,'bar');pb.append(el('b','🎶 Playlist'),el('button',PON?'🔊 Sonando (apagar)':'🔇 Apagada (encender)',0,()=>{setPon(!PON);menu()}),el('button','⏭ Siguiente',0,()=>{isCli()?A('plnext'):plNext()}),el('span',PLY.length?PLY.length+' temas · ahora: '+(PLY[pI]?PLY[pI].n:'—')+(isHost||isCli()?' · sincronizada con la sala':''):'Sin temas: agregalos en la hoja (tipo playlist)'));
  pg.append(pb,sl('Volumen de la playlist',()=>PV,v=>{PV=v;sv('hx3pv',v);plVol()}),...(BP?[sl('Volumen de tu música personal (la del Locker)',()=>BP.vol,v=>{BP.vol=v;AU.volume=v;bpSave()})]:[el('p','Entrá con tu cuenta para regular tu música personal.','hint')]),sl('Volumen del golpe a la pelota (0 = sin sonido)',()=>KV,v=>{KV=v;sv('hx3kv',v)}),el('p','Música de gol','hint'),sl('Volumen de músicas de gol (0 = silencio)',()=>GV,v=>{GV=v;sv('hx3gv',v);audApply()}),
  el('p','Cada jugador elige su música de gol en el Locker. La oyen todos cuando mete un gol a favor (no en autogoles), se corta a los 8 s y si caen dos goles seguidos esperan su turno. La playlist suena como si saliera de los parlantes del estadio (se oye de costado y más fuerte o más lejana según dónde estés), se funde con la música de gol (baja cuando entra el gol y vuelve suave cuando termina), y la música de gol también sale de los parlantes; también se pausa si tenés una música personal activa. Estos volúmenes son solo tuyos.','hint'))}
 
