@@ -279,7 +279,7 @@ function phys(b,L){const M=p=>p.ef===5?6:p.ef===6?10:p.ef===8?1:2;for(const p of
 function hostStep(){specStep();if(!S.run||S.pa)return;
  if(S.pw&&++S.pwt>=3600){givePw();bro();sys('🔄 ¡Los poderes rotaron! Cada uno recibió uno nuevo.')}
  if(S.fr>0&&--S.fr===0){const w=S.m;S.m=0;if(S.over){S.over=0;S.run=0;S.ko=0;for(const id in PL)if(PL[id].team)setT(id,0,1);bro();sys('🏁 Terminó el partido: todos pasan a espectadores');all({t:'menu'});openMenu();return}else resetAll(w===1?2:1)}
- if(S.lim[1]&&!S.fr&&!S.ot){S.tm-=1/60;if(S.tm<=0){S.tm=0;if(S.s[0]!==S.s[1])end(S.s[0]>S.s[1]?1:2);else S.ot=1}}
+ if(S.lim[1]&&!S.fr&&!S.ot&&!S.ko){S.tm-=1/60;if(S.tm<=0){S.tm=0;if(S.s[0]!==S.s[1])end(S.s[0]>S.s[1]?1:2);else S.ot=1}}
  const b=S.b,L=Object.values(S.p),M=p=>p.ef===5?6:p.ef===6?10:p.ef===8?1:2;
  for(const id in S.p){const p=S.p[id];p.in=PL[id]?PL[id].in:{};p.cd=Math.max(0,(p.cd||0)-1);p.fz=Math.max(0,(p.fz||0)-1);if(p.et>0&&--p.et===0)p.ef=0;p.r=p.ef===5?PR*1.8:p.ef===8?PR*.5:PR;
   if(p.in.p&&!p.pl&&!p.cd&&!p.fz&&S.pw)usePw(p,id);p.pl=p.in.p}
