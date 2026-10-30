@@ -349,7 +349,7 @@ for(const s of[-1,1]){wall(2*HW+2*GD+12,6,0,s*(HH+3));for(const t of[-1,1]){wall
   g3.position.set(s2*SPX,16,0);sc.add(g3)}}
 sc.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false});
 // ---------- espacio ----------
-const sky=new THREE.Group();sc.add(sky);let PLN=null;
+const sky=new THREE.Group();sc.add(sky);let PLN=null,PL2=null,RDT=null;
 {const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');x.fillStyle='#02030a';x.fillRect(0,0,1024,512);
  [[210,150,190,'110,70,220'],[560,330,230,'30,120,210'],[790,130,190,'200,60,160'],[380,440,170,'70,50,170']].forEach(a=>{const gr=x.createRadialGradient(a[0],a[1],0,a[0],a[1],a[2]);gr.addColorStop(0,'rgba('+a[3]+',.38)');gr.addColorStop(1,'rgba('+a[3]+',0)');x.fillStyle=gr;x.fillRect(0,0,1024,512)});
  const d=new THREE.Mesh(new THREE.SphereGeometry(1500,24,16),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.BackSide,fog:false,depthWrite:false}));d.renderOrder=-10;d.frustumCulled=false;sky.add(d)}
@@ -366,6 +366,37 @@ for(const[n,sz]of[[1400,2.2],[220,3.6]]){const P=new Float32Array(n*3),C=new Flo
  const grp=new THREE.Group(),pm=new THREE.Mesh(new THREE.SphereGeometry(300,72,48),new THREE.MeshLambertMaterial({map:tx})),
   at=new THREE.Mesh(new THREE.SphereGeometry(316,48,32),new THREE.MeshBasicMaterial({color:0x4aa8ff,transparent:true,opacity:.22,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false}));
  grp.position.set(-520,470,980);grp.rotation.z=.38;grp.add(pm,at);sky.add(grp);PLN=pm}
+// planeta gaseoso nuevo + ruta de luz original (cinta cian→violeta→magenta con rulo) que se pierde detrás de él
+{const grp=new THREE.Group(),Q=new THREE.Vector3(950,170,700),DL=Q.length(),dz=Q.clone().normalize(),dx=new THREE.Vector3(0,1,0).cross(dz).normalize(),dy=dz.clone().cross(dx);
+ grp.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dx,dy,dz));sky.add(grp);
+ const pc=document.createElement('canvas');pc.width=512;pc.height=256;const q2=pc.getContext('2d'),gr=q2.createLinearGradient(0,0,0,256);
+ ['#1b2a6b','#2f5fb8','#4fc3d9','#2b7f9e','#6a4fc2','#a06be0','#3a3f9c','#1c2c70'].forEach((c,i,a)=>gr.addColorStop(i/(a.length-1),c));q2.fillStyle=gr;q2.fillRect(0,0,512,256);
+ for(let i=0;i<110;i++){const y=Math.random()*256,h=3+Math.random()*12,ph=Math.random()*6.28,k=1+(Math.random()*3|0);q2.fillStyle=Math.random()<.5?'rgba(255,255,255,'+(.04+Math.random()*.08)+')':'rgba(10,10,70,'+(.06+Math.random()*.1)+')';
+  q2.beginPath();for(let x=0;x<=512;x+=16)q2.lineTo(x,y+Math.sin(x/512*6.2832*k+ph)*h*.6);for(let x=512;x>=0;x-=16)q2.lineTo(x,y+h+Math.sin(x/512*6.2832*k+ph)*h*.6);q2.fill()}
+ q2.fillStyle='rgba(255,230,250,.35)';q2.beginPath();q2.ellipse(330,150,38,17,0,0,7);q2.fill();q2.fillStyle='rgba(180,120,255,.5)';q2.beginPath();q2.ellipse(330,150,21,9,0,0,7);q2.fill();
+ const ptx=new THREE.CanvasTexture(pc);ptx.anisotropy=8;
+ const pl=new THREE.Mesh(new THREE.SphereGeometry(270,64,40),new THREE.MeshLambertMaterial({map:ptx})),
+  at=new THREE.Mesh(new THREE.SphereGeometry(286,48,32),new THREE.MeshBasicMaterial({color:0x7a6bff,transparent:true,opacity:.24,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})),pv=new THREE.Group();
+ pv.position.set(0,0,DL);pv.rotation.z=-.3;pv.add(pl,at);grp.add(pv);PL2=pl;
+ // textura de la ruta: bordes brillantes, líneas de carril y celdas; se desliza para dar sensación de energía fluyendo
+ const rc=document.createElement('canvas');rc.width=rc.height=128;const r2=rc.getContext('2d');r2.fillStyle='rgb(26,36,84)';r2.fillRect(0,0,128,128);
+ r2.fillStyle='#fff';r2.fillRect(0,0,9,128);r2.fillRect(119,0,9,128);r2.fillStyle='rgb(120,140,255)';r2.fillRect(34,0,2,128);r2.fillRect(92,0,2,128);r2.fillStyle='rgb(200,215,255)';r2.fillRect(62,0,4,64);r2.fillStyle='rgb(90,110,210)';r2.fillRect(0,0,128,3);
+ const rt=new THREE.CanvasTexture(rc);rt.wrapS=rt.wrapT=THREE.RepeatWrapping;rt.anisotropy=8;RDT=rt;
+ const pts=[[-1050,-170,-260],[-850,-100,-200],[-660,-30,-130],[-520,30,-70]];
+ for(let a=0;a<=6.2832;a+=.4)pts.push([-380+170*Math.sin(a),200-170*Math.cos(a),-60+a*26]);
+ pts.push([-250,60,160],[-110,60,240],[10,50,330],[120,30,420],[220,10,520]);
+ const cu=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],p[1],DL+p[2])),false,'catmullrom',.5);cu.arcLengthDivisions=900;
+ const GS=[[0,[.1,.85,1]],[.35,[.45,.4,1]],[.7,[1,.35,.85]],[1,[.4,.5,1]]],gc=s=>{for(let i=1;i<GS.length;i++)if(s<=GS[i][0]){const a=GS[i-1],b=GS[i],t=(s-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>v+(b[1][k]-v)*t)}return GS[3][1]};
+ const N=700,C=5,HW2=48,len=cu.getLength(),PO=new Float32Array((N+1)*C*3),UV=new Float32Array((N+1)*C*2),CO=new Float32Array((N+1)*C*3),IX=[];
+ for(let i=0;i<=N;i++){const s=i/N,pos=cu.getPointAt(s),T=cu.getTangentAt(s),V=pos.clone().negate().normalize(),w=new THREE.Vector3().crossVectors(T,V).normalize(),th=.95*Math.sin(s*14),n2=new THREE.Vector3().crossVectors(T,w);
+  w.multiplyScalar(Math.cos(th)).addScaledVector(n2,Math.sin(th));const fd=Math.min(1,s/.12),f=fd*fd*(3-2*fd)*.95,col=gc(s);
+  for(let j=0;j<C;j++){const o=i*C+j,k=(j/(C-1)-.5)*2*HW2;PO[o*3]=pos.x+w.x*k;PO[o*3+1]=pos.y+w.y*k;PO[o*3+2]=pos.z+w.z*k;UV[o*2]=j/(C-1);UV[o*2+1]=s*len/110;CO[o*3]=col[0]*f;CO[o*3+1]=col[1]*f;CO[o*3+2]=col[2]*f}
+  if(i<N)for(let j=0;j<C-1;j++){const a=i*C+j,b=a+1,c=a+C,d=c+1;IX.push(a,c,b,b,c,d)}}
+ const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(PO,3));rg.setAttribute('uv',new THREE.BufferAttribute(UV,2));rg.setAttribute('color',new THREE.BufferAttribute(CO,3));rg.setIndex(IX);
+ const road=new THREE.Mesh(rg,new THREE.MeshBasicMaterial({map:rt,vertexColors:true,transparent:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));road.frustumCulled=false;grp.add(road);
+ // arcos de luz sobre la ruta
+ const tg=new THREE.TorusGeometry(80,3.5,10,44);for(const s of[.1,.17,.55,.64,.73,.82]){const col=gc(s),m=new THREE.Mesh(tg,new THREE.MeshBasicMaterial({color:new THREE.Color(col[0],col[1],col[2]),transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));
+  m.position.copy(cu.getPointAt(s));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),cu.getTangentAt(s));grp.add(m)}}
 const bc=document.createElement('canvas');bc.width=512;bc.height=256;const bg=bc.getContext('2d');bg.scale(4,4);bg.fillStyle='#ffd21f';bg.fillRect(0,0,128,64);bg.fillStyle='#c98f00';
 [[10,12],[40,40],[70,14],[100,44],[120,18],[25,58],[85,60]].forEach(a=>{bg.beginPath();bg.arc(a[0],a[1],9,0,7);bg.fill()});
 // pelota 2: amarilla lisa con UNA sola cara sonriente negra
@@ -467,7 +498,7 @@ function camUpdate(){const q=S.p[myId]||S.sp[myId],B=S.b,eh=S.p[myId]||!q?0:(q.h
   if(m===3){px=q.x-dx*130;py=80+eh;pz=q.y-dz*130;lx=q.x+dx*140;ly=4+eh;lz=q.y+dz*140}else{px=q.x+dx*4;py=PR*1.7+eh;pz=q.y+dz*4;lx=q.x+dx*200;ly=10+eh;lz=q.y+dz*200}}
  if(fr){hv.x=fx;hv.z=fz}else{hv.x+=(fx-hv.x)*.2;hv.z+=(fz-hv.z)*.2}const hl=Math.hypot(hv.x,hv.z)||1;hv.x/=hl;hv.z/=hl;
  if(fr){camPos.set(px,py,pz);camLk.set(lx,ly,lz)}else{camPos.lerp(tmp.set(px,py,pz),s);camLk.lerp(tmp.set(lx,ly,lz),Math.min(1,s*1.6))}
- cam.position.copy(camPos);cam.lookAt(camLk);sky.position.copy(camPos);sky.rotation.y+=.00004;if(PLN)PLN.rotation.y+=.0016;
+ cam.position.copy(camPos);cam.lookAt(camLk);sky.position.copy(camPos);sky.rotation.y+=.00004;if(PLN)PLN.rotation.y+=.0016;if(PL2)PL2.rotation.y+=.0011;if(RDT)RDT.offset.y-=.004;
  let fv=FOV[m];if((m===3||m===6)&&cam.aspect<1)fv=Math.min(95,fv/Math.sqrt(Math.max(.5,cam.aspect)));
  if(cam.fov!==fv){cam.fov=fv;cam.updateProjectionMatrix()}const o=D[myId];if(o)o.m.visible=m!==4&&m!==5}
 // ---------- pase de batalla ----------
